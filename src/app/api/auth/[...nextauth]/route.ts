@@ -1,31 +1,7 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import NextAuth from 'next-auth'
 import { authOptions } from './authOptions'
 
-export async function GET(request: Request) {
-  try {
-    const session = await getServerSession(authOptions)
+// Handler do NextAuth - DEVE ser exportado como GET e POST
+const handler = NextAuth(authOptions)
 
-    if (!session?.user || (session.user as any).role !== 'SUPER_ADMIN') {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 403 }
-      )
-    }
-
-    const clients = await prisma.family.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
-
-    return NextResponse.json({ clients })
-  } catch (error) {
-    console.error('Erro ao buscar clientes:', error)
-    return NextResponse.json(
-      { error: 'Erro interno ao buscar clientes' },
-      { status: 500 }
-    )
-  }
-}
+export { handler as GET, handler as POST }
