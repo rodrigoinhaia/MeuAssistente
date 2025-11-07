@@ -12,27 +12,27 @@ datasource db {
 
 // Modelo para Famílias
 model Family {
-  id                String   @id @default(uuid())
-  name              String
-  phone             String
-  phoneNumber       String   @unique @map("phone_number")
-  settings          Json?    @default("{}")
-  subscriptionPlan  String   @default("basic") @map("subscription_plan")
-  isActive          Boolean  @default(true) @map("is_active")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  name             String
+  phone            String
+  phoneNumber      String   @unique @map("phone_number")
+  settings         Json?    @default("{}")
+  subscriptionPlan String   @default("basic") @map("subscription_plan")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
-  users         User[]
-  categories    Category[]
-  transactions  Transaction[]
-  commitments   Commitment[]
-  tasks         Task[]
-  subscriptions Subscription[]
-  n8nWorkflows  N8NWorkflow[]
-  integrations  Integration[]
-  syncLogs      SyncLog[]
-  payments      Payment[]
+  users           User[]
+  categories      Category[]
+  transactions    Transaction[]
+  commitments     Commitment[]
+  tasks           Task[]
+  subscriptions   Subscription[]
+  n8nWorkflows    N8NWorkflow[]
+  integrations    Integration[]
+  syncLogs        SyncLog[]
+  payments        Payment[]
   bankConnections BankConnection[]
 
   @@map("families")
@@ -61,11 +61,11 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relacionamentos
-  transactions Transaction[]
-  commitments  Commitment[]
-  tasks        Task[]
-  integrations Integration[]
-  syncLogs     SyncLog[]
+  transactions    Transaction[]
+  commitments     Commitment[]
+  tasks           Task[]
+  integrations    Integration[]
+  syncLogs        SyncLog[]
   bankConnections BankConnection[]
 
   @@unique([email, familyId])
@@ -94,23 +94,23 @@ model Category {
 
 // Modelo para Transações
 model Transaction {
-  id                String   @id @default(cuid())
-  familyId          String   @map("family_id")
-  userId            String   @map("user_id")
-  categoryId        String?  @map("category_id")
-  bankConnectionId  String?  @map("bank_connection_id")
-  bankTransactionId String?  @map("bank_transaction_id") // ID da transação no banco
-  amount            Decimal  @db.Decimal(10, 2)
+  id                String    @id @default(cuid())
+  familyId          String    @map("family_id")
+  userId            String    @map("user_id")
+  categoryId        String?   @map("category_id")
+  bankConnectionId  String?   @map("bank_connection_id")
+  bankTransactionId String?   @map("bank_transaction_id") // ID da transação no banco
+  amount            Decimal   @db.Decimal(10, 2)
   description       String
   type              String // expense, income
   date              DateTime
   dueDate           DateTime? @map("due_date")
-  status            String   @default("pending") // pending, paid, overdue
-  isRecurring       Boolean  @default(false) @map("is_recurring")
-  recurringType     String?  @map("recurring_type") // daily, weekly, monthly, yearly
-  aiCategorized     Boolean  @default(false) @map("ai_categorized") // Se foi categorizado por IA
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  status            String    @default("pending") // pending, paid, overdue
+  isRecurring       Boolean   @default(false) @map("is_recurring")
+  recurringType     String?   @map("recurring_type") // daily, weekly, monthly, yearly
+  aiCategorized     Boolean   @default(false) @map("ai_categorized") // Se foi categorizado por IA
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   // Relacionamentos
   family         Family          @relation(fields: [familyId], references: [id], onDelete: Cascade)
@@ -147,17 +147,17 @@ model Commitment {
 
 // Modelo para Tarefas
 model Task {
-  id            String   @id @default(cuid())
-  familyId      String   @map("family_id")
-  userId        String   @map("user_id")
-  title         String
-  description   String?
-  dueDate       DateTime @map("due_date")
-  googleTaskId  String?  @map("google_task_id")
-  status        String   @default("pending") // pending, in_progress, completed
-  priority      String   @default("medium") // low, medium, high
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  familyId     String   @map("family_id")
+  userId       String   @map("user_id")
+  title        String
+  description  String?
+  dueDate      DateTime @map("due_date")
+  googleTaskId String?  @map("google_task_id")
+  status       String   @default("pending") // pending, in_progress, completed
+  priority     String   @default("medium") // low, medium, high
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
   family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
@@ -187,20 +187,20 @@ model Plan {
 
 // Modelo para Assinaturas
 model Subscription {
-  id                  String   @id @default(cuid())
-  familyId            String   @map("family_id")
-  planId              String   @map("plan_id")
-  status              String   @default("active") // active, inactive, cancelled
-  startDate           DateTime @map("start_date")
+  id                  String    @id @default(cuid())
+  familyId            String    @map("family_id")
+  planId              String    @map("plan_id")
+  status              String    @default("active") // active, inactive, cancelled
+  startDate           DateTime  @map("start_date")
   endDate             DateTime? @map("end_date")
-  asaasSubscriptionId String?  @map("asaas_subscription_id")
-  price               Decimal  @db.Decimal(10, 2) // Preço no momento da assinatura
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  asaasSubscriptionId String?   @map("asaas_subscription_id")
+  price               Decimal   @db.Decimal(10, 2) // Preço no momento da assinatura
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   // Relacionamentos
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  plan   Plan   @relation(fields: [planId], references: [id])
+  family   Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  plan     Plan      @relation(fields: [planId], references: [id])
   payments Payment[]
 
   @@map("subscriptions")
@@ -208,15 +208,15 @@ model Subscription {
 
 // Modelo para Fluxos N8N
 model N8NWorkflow {
-  id            String   @id @default(cuid())
-  familyId      String   @map("family_id")
+  id            String    @id @default(cuid())
+  familyId      String    @map("family_id")
   name          String
-  workflowId    String   @unique @map("workflow_id")
-  status        String   @default("active") // active, inactive, error
+  workflowId    String    @unique @map("workflow_id")
+  status        String    @default("active") // active, inactive, error
   lastExecution DateTime? @map("last_execution")
-  config        Json?    @default("{}")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  config        Json?     @default("{}")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   // Relacionamentos
   family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
@@ -228,7 +228,7 @@ model N8NWorkflow {
 model ProcessingLog {
   id        String   @id @default(cuid())
   familyId  String   @map("family_id")
-  type      String   // whatsapp, google_calendar, google_tasks, ai
+  type      String // whatsapp, google_calendar, google_tasks, ai
   message   String
   data      Json?
   status    String   @default("success") // success, error, warning
@@ -314,4 +314,34 @@ model Payment {
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@map("payments")
+}
+
+// Modelo para Conexões Bancárias (Open Finance)
+model BankConnection {
+  id              String    @id @default(cuid())
+  familyId        String    @map("family_id")
+  userId          String    @map("user_id")
+  provider        String // 'pluggto', 'belvo', 'openbanking', etc.
+  institutionName String    @map("institution_name") // Nome do banco
+  institutionId   String    @map("institution_id") // ID da instituição no provedor
+  accountId       String?   @map("account_id") // ID da conta no provedor
+  accountType     String?   @map("account_type") // checking, savings, credit_card
+  accountNumber   String?   @map("account_number") // Últimos dígitos da conta
+  accessToken     String    @map("access_token") // Token de acesso do Open Finance
+  refreshToken    String?   @map("refresh_token")
+  expiresAt       DateTime? @map("expires_at")
+  consentId       String?   @map("consent_id") // ID do consentimento Open Finance
+  status          String    @default("active") // active, expired, revoked, error
+  lastSyncAt      DateTime? @map("last_sync_at")
+  autoSync        Boolean   @default(true) @map("auto_sync")
+  config          Json?     @default("{}") // Configurações adicionais
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("bank_connections")
 }
