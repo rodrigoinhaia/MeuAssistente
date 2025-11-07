@@ -21,26 +21,29 @@ export async function GET(req: Request) {
   const categoryId = searchParams.get('categoryId')
   const filterUserId = searchParams.get('userId') // Novo filtro opcional
   
+  // SUPER_ADMIN em modo admin NÃO pode ver transações (apenas configurações globais)
+  if (role === 'SUPER_ADMIN' && context === 'admin') {
+    return NextResponse.json(
+      { status: 'error', message: 'Acesso negado. Transações são dados familiares e não estão disponíveis no modo Admin.' },
+      { status: 403 }
+    )
+  }
+  
   try {
     // SUPER_ADMIN em modo família vê apenas transações da sua família (comporta-se como OWNER)
-    // SUPER_ADMIN em modo admin NÃO vê transações (apenas configurações globais)
     // Outros roles filtram por família
-    const where: any = (role === 'SUPER_ADMIN' && context === 'admin') 
-      ? {} // Modo admin não deve ver transações, mas deixamos vazio para não quebrar
-      : { familyId }
+    const where: any = { familyId }
     
     // Controle de permissões: USER só vê suas próprias transações
     // OWNER pode ver todas da família ou filtrar por usuário específico
-    // SUPER_ADMIN vê todas as transações de todas as famílias
     if (role === 'USER') {
       // USER sempre vê apenas suas próprias transações
       where.userId = userId
-    } else if (role !== 'SUPER_ADMIN' && filterUserId) {
+    } else if (filterUserId) {
       // OWNER pode filtrar por usuário específico se fornecido
       where.userId = filterUserId
     }
     // Se for OWNER e não fornecer filterUserId, vê todas da família
-    // Se for SUPER_ADMIN, vê todas as transações
     
     if (startDate && endDate) {
       where.date = { gte: new Date(startDate), lte: new Date(endDate) }

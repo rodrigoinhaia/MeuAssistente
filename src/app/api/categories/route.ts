@@ -12,14 +12,20 @@ export async function GET(req: Request) {
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
+  
+  // SUPER_ADMIN em modo admin NÃO pode ver categorias (apenas configurações globais)
+  if (role === 'SUPER_ADMIN' && context === 'admin') {
+    return NextResponse.json(
+      { status: 'error', message: 'Acesso negado. Categorias são dados familiares e não estão disponíveis no modo Admin.' },
+      { status: 403 }
+    )
+  }
+  
   try {
     // SUPER_ADMIN em modo família vê apenas categorias da sua família (comporta-se como OWNER)
-    // SUPER_ADMIN em modo admin NÃO vê categorias (apenas configurações globais)
-    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
-      ? {} // Modo admin não deve ver categorias, mas deixamos vazio para não quebrar
-      : { familyId }
+    // Outros roles vêem apenas categorias da sua família
     const categories = await prisma.category.findMany({
-      where: whereClause,
+      where: { familyId },
       orderBy: { name: 'asc' },
     })
     return NextResponse.json({ status: 'ok', categories })

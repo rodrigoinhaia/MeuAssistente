@@ -11,13 +11,18 @@ export async function GET(req: Request) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
 
+  // SUPER_ADMIN em modo admin NÃO pode ver estatísticas financeiras (apenas relatórios de negócio)
+  if (role === 'SUPER_ADMIN' && context === 'admin') {
+    return NextResponse.json(
+      { status: 'error', message: 'Acesso negado. Estatísticas financeiras são dados familiares e não estão disponíveis no modo Admin. Use a página de Relatórios para métricas de negócio.' },
+      { status: 403 }
+    )
+  }
+
   try {
     // SUPER_ADMIN em modo família vê estatísticas da sua família (comporta-se como OWNER)
-    // SUPER_ADMIN em modo admin NÃO vê estatísticas financeiras (apenas relatórios de negócio)
     // Outros roles só da sua família
-    const whereBase = (role === 'SUPER_ADMIN' && context === 'admin') 
-      ? {} // Modo admin não deve ver stats financeiras, mas deixamos vazio para não quebrar
-      : { familyId }
+    const whereBase = { familyId }
     
     const today = new Date()
     today.setHours(0, 0, 0, 0)
