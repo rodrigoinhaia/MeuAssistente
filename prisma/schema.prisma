@@ -1,0 +1,311 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo para Famílias
+model Family {
+  id                String   @id @default(uuid())
+  name              String
+  phone             String
+  phoneNumber       String   @unique @map("phone_number")
+  settings          Json?    @default("{}")
+  subscriptionPlan  String   @default("basic") @map("subscription_plan")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  users         User[]
+  categories    Category[]
+  transactions  Transaction[]
+  commitments   Commitment[]
+  tasks         Task[]
+  subscriptions Subscription[]
+  n8nWorkflows  N8NWorkflow[]
+  integrations  Integration[]
+  syncLogs      SyncLog[]
+  payments      Payment[]
+
+  @@map("families")
+}
+
+// Modelo para Usuários
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  password     String
+  cpf          String
+  phone        String
+  cep          String?
+  street       String?
+  number       String?
+  complement   String?
+  neighborhood String?
+  city         String?
+  state        String?
+  role         UserRole @default(OWNER)
+  isActive     Boolean  @default(true) @map("is_active")
+  familyId     String
+  family       Family   @relation(fields: [familyId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relacionamentos
+  transactions Transaction[]
+  commitments  Commitment[]
+  tasks        Task[]
+  integrations Integration[]
+  syncLogs     SyncLog[]
+
+  @@unique([email, familyId])
+  @@map("users")
+}
+
+// Modelo para Categorias
+model Category {
+  id        String   @id @default(cuid())
+  familyId  String   @map("family_id")
+  name      String
+  type      String // expense, income
+  color     String   @default("#3B82F6")
+  icon      String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([name, familyId, type])
+  @@map("categories")
+}
+
+// Modelo para Transações
+model Transaction {
+  id          String   @id @default(cuid())
+  familyId    String   @map("family_id")
+  userId      String   @map("user_id")
+  categoryId  String?  @map("category_id")
+  amount      Decimal  @db.Decimal(10, 2)
+  description String
+  type        String // expense, income
+  date        DateTime
+  dueDate     DateTime? @map("due_date")
+  status      String   @default("pending") // pending, paid, overdue
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  recurringType String? @map("recurring_type") // daily, weekly, monthly, yearly
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family   Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("transactions")
+}
+
+// Modelo para Compromissos
+model Commitment {
+  id            String   @id @default(cuid())
+  familyId      String   @map("family_id")
+  userId        String   @map("user_id")
+  title         String
+  description   String?
+  date          DateTime
+  time          String?
+  googleEventId String?  @map("google_event_id")
+  status        String   @default("scheduled") // scheduled, completed, cancelled
+  isRecurring   Boolean  @default(false) @map("is_recurring")
+  recurringType String?  @map("recurring_type")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("commitments")
+}
+
+// Modelo para Tarefas
+model Task {
+  id            String   @id @default(cuid())
+  familyId      String   @map("family_id")
+  userId        String   @map("user_id")
+  title         String
+  description   String?
+  dueDate       DateTime @map("due_date")
+  googleTaskId  String?  @map("google_task_id")
+  status        String   @default("pending") // pending, in_progress, completed
+  priority      String   @default("medium") // low, medium, high
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+
+// Modelo para Planos
+model Plan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  price       Decimal  @db.Decimal(10, 2)
+  features    String[] // Array de recursos do plano
+  maxUsers    Int      @default(5) @map("max_users")
+  maxStorage  Int      @default(1) @map("max_storage") // Em GB
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+// Modelo para Assinaturas
+model Subscription {
+  id                  String   @id @default(cuid())
+  familyId            String   @map("family_id")
+  planId              String   @map("plan_id")
+  status              String   @default("active") // active, inactive, cancelled
+  startDate           DateTime @map("start_date")
+  endDate             DateTime? @map("end_date")
+  asaasSubscriptionId String?  @map("asaas_subscription_id")
+  price               Decimal  @db.Decimal(10, 2) // Preço no momento da assinatura
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@map("subscriptions")
+}
+
+// Modelo para Fluxos N8N
+model N8NWorkflow {
+  id            String   @id @default(cuid())
+  familyId      String   @map("family_id")
+  name          String
+  workflowId    String   @unique @map("workflow_id")
+  status        String   @default("active") // active, inactive, error
+  lastExecution DateTime? @map("last_execution")
+  config        Json?    @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@map("n8n_workflows")
+}
+
+// Modelo para Logs de Processamento
+model ProcessingLog {
+  id        String   @id @default(cuid())
+  familyId  String   @map("family_id")
+  type      String   // whatsapp, google_calendar, google_tasks, ai
+  message   String
+  data      Json?
+  status    String   @default("success") // success, error, warning
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("processing_logs")
+}
+
+// Modelo para Integrações (Google, Asaas, etc.)
+model Integration {
+  id           String    @id @default(cuid())
+  familyId     String    @map("family_id")
+  userId       String    @map("user_id")
+  provider     String // google, asaas, etc.
+  accessToken  String    @map("access_token")
+  refreshToken String?   @map("refresh_token")
+  expiresAt    DateTime? @map("expires_at")
+  scope        String?
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, userId, provider])
+  @@map("integrations")
+}
+
+// Modelo para Logs de Sincronização
+model SyncLog {
+  id        String   @id @default(cuid())
+  familyId  String   @map("family_id")
+  userId    String   @map("user_id")
+  type      String // 'import_calendar', 'export_calendar', 'import_tasks', 'export_tasks'
+  status    String // 'success', 'error'
+  count     Int
+  errors    Int
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([userId])
+  @@map("sync_logs")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  ADMIN
+  USER
+}
+
+// Status dos Pagamentos
+enum PaymentStatus {
+  pending
+  paid
+  overdue
+  cancelled
+  failed
+}
+
+// Modelo para Pagamentos
+model Payment {
+  id             String        @id @default(cuid())
+  familyId       String        @map("family_id")
+  subscriptionId String        @map("subscription_id")
+  amount         Decimal       @db.Decimal(10, 2)
+  status         PaymentStatus @default(pending)
+  dueDate        DateTime      @map("due_date")
+  paidDate       DateTime?     @map("paid_date")
+  invoiceNumber  String        @map("invoice_number")
+  paymentMethod  String        @default("credit_card") @map("payment_method")
+  transactionId  String?       @map("transaction_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  family       Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
