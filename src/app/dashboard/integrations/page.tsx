@@ -82,6 +82,11 @@ export default function IntegrationsPage() {
   })
   const [evolutionStatus, setEvolutionStatus] = useState<any>(null)
   const [checkingEvolutionStatus, setCheckingEvolutionStatus] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importBankName, setImportBankName] = useState('')
+  const [importResults, setImportResults] = useState<any>(null)
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -89,6 +94,14 @@ export default function IntegrationsPage() {
       fetchSyncHistory()
       fetchBankConnections()
       fetchInstitutions()
+    }
+    
+    // Verificar se deve abrir modal de importação
+    const importParam = searchParams.get('import')
+    if (importParam === 'true') {
+      setShowImportModal(true)
+      // Limpar parâmetro da URL
+      window.history.replaceState({}, '', '/dashboard/integrations')
     }
     
     // Verificar feedback de callback OAuth
@@ -354,6 +367,45 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function handleFileImport() {
+    if (!importFile) {
+      setError('Selecione um arquivo para importar')
+      return
+    }
+
+    setImporting(true)
+    setError('')
+    setSuccess('')
+    setImportResults(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+      if (importBankName) {
+        formData.append('bankName', importBankName)
+      }
+
+      const res = await apiClient.post('/transactions/import', formData)
+
+      if (res.data.status === 'ok') {
+        setSuccess(res.data.message)
+        setImportResults(res.data)
+        setImportFile(null)
+        setImportBankName('')
+        // Atualizar página de transações se estiver aberta
+        if (window.location.pathname.includes('/transactions')) {
+          window.location.reload()
+        }
+      } else {
+        setError(res.data.message || 'Erro ao importar transações')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao importar arquivo')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   async function createEvolutionInstance() {
     setError('')
     setSuccess('')
@@ -572,6 +624,13 @@ export default function IntegrationsPage() {
           >
             <RiWhatsappFill className="w-5 h-5" />
             {hasEvolutionIntegration ? 'Evolution API já configurada' : 'Configurar Evolution API (WhatsApp)'}
+          </button>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-teal-600 text-white hover:shadow-lg hover:shadow-cyan-500/30"
+          >
+            <RiUploadLine className="w-5 h-5" />
+            Importar Extrato Bancário
           </button>
         </div>
       </div>
@@ -1371,6 +1430,236 @@ export default function IntegrationsPage() {
                 {evolutionStatus ? 'Atualizar' : 'Criar Instância'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Importação de Extrato */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl border border-slate-200/60 space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent flex items-center gap-2">
+                <RiUploadLine className="w-6 h-6 text-cyan-600" />
+                Importar Extrato Bancário
+              </h2>
+              <button
+                onClick={() => {
+                  setShowImportModal(false)
+                  setImportFile(null)
+                  setImportBankName('')
+                  setImportResults(null)
+                  setError('')
+                  setSuccess('')
+                }}
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+              >
+                <RiCloseCircleLine className="w-5 h-5" />
+              </button>
+            </div>
+
+            {!importResults ? (
+              <>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>📄 Formatos Suportados:</strong>
+                  </p>
+                  <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                    <li><strong>OFX</strong> - Formato padrão bancário (recomendado)</li>
+                    <li><strong>CSV</strong> - Formato de planilha (Nubank, Banco do Brasil, Itaú, Bradesco, etc.)</li>
+                  </ul>
+                  <p className="text-xs text-blue-600 mt-3">
+                    💡 <strong>Dica:</strong> Exporte seu extrato do internet banking no formato OFX para melhor compatibilidade.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Selecione o arquivo (OFX ou CSV) *
+                    </label>
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-cyan-400 transition-colors">
+                      <input
+                        type="file"
+                        accept=".ofx,.csv"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            setImportFile(file)
+                            setError('')
+                          }
+                        }}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <RiUploadLine className="w-12 h-12 text-cyan-500" />
+                        <span className="text-slate-700 font-medium">
+                          {importFile ? importFile.name : 'Clique para selecionar arquivo'}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          Formatos: .ofx, .csv (máx. 10MB)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Nome do Banco (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Nubank, Banco do Brasil, Itaú..."
+                      value={importBankName}
+                      onChange={(e) => setImportBankName(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Ajuda na detecção do formato CSV específico do banco
+                    </p>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportModal(false)
+                      setImportFile(null)
+                      setImportBankName('')
+                      setError('')
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleFileImport}
+                    disabled={!importFile || importing}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {importing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Importando...
+                      </>
+                    ) : (
+                      <>
+                        <RiUploadLine className="w-4 h-4" />
+                        Importar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <RiCheckboxCircleLine className="w-5 h-5 text-emerald-600" />
+                    <p className="font-semibold text-emerald-800">Importação Concluída!</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-emerald-700 font-medium">Importadas:</span>
+                      <span className="ml-2 text-emerald-800 font-bold">{importResults.summary?.imported || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-emerald-700 font-medium">Categorizadas:</span>
+                      <span className="ml-2 text-emerald-800 font-bold">{importResults.summary?.categorized || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 font-medium">Duplicadas:</span>
+                      <span className="ml-2 text-slate-700">{importResults.summary?.duplicates || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-600 font-medium">Erros:</span>
+                      <span className="ml-2 text-slate-700">{importResults.summary?.errors || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {importResults.results && importResults.results.length > 0 && (
+                  <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-xl">
+                    <div className="p-3 bg-slate-50 border-b border-slate-200 sticky top-0">
+                      <p className="text-sm font-semibold text-slate-700">Detalhes da Importação</p>
+                    </div>
+                    <div className="divide-y divide-slate-200">
+                      {importResults.results.slice(0, 10).map((result: any, idx: number) => (
+                        <div key={idx} className="p-3 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-700 truncate flex-1">{result.description}</span>
+                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                              result.status === 'imported'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : result.status === 'duplicate'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {result.status === 'imported' ? '✓ Importada' :
+                               result.status === 'duplicate' ? 'Duplicada' : 'Erro'}
+                            </span>
+                          </div>
+                          {result.categoryName && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              Categoria: <span className="font-medium">{result.categoryName}</span>
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                      {importResults.results.length > 10 && (
+                        <div className="p-3 text-center text-xs text-slate-500">
+                          +{importResults.results.length - 10} transações adicionais
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportModal(false)
+                      setImportFile(null)
+                      setImportBankName('')
+                      setImportResults(null)
+                      setError('')
+                      setSuccess('')
+                      window.location.href = '/dashboard/transactions'
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium"
+                  >
+                    Ver Transações
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportModal(false)
+                      setImportFile(null)
+                      setImportBankName('')
+                      setImportResults(null)
+                      setError('')
+                      setSuccess('')
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

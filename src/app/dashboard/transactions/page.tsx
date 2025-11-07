@@ -21,7 +21,8 @@ import {
   RiPriceTag3Line,
   RiCheckboxCircleLine,
   RiTimeLine,
-  RiCloseCircleLine
+  RiCloseCircleLine,
+  RiUploadLine
 } from 'react-icons/ri'
 
 interface Transaction {
@@ -276,6 +277,14 @@ export default function TransactionsPage() {
           <p className="text-slate-600 mt-1">Gerencie suas receitas e despesas</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.location.href = '/dashboard/integrations?import=true'}
+            className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all font-medium flex items-center gap-2 shadow-sm"
+            title="Importar extrato bancário (OFX/CSV)"
+          >
+            <RiUploadLine className="w-5 h-5" />
+            <span className="hidden md:inline">Importar Extrato</span>
+          </button>
           <button
             onClick={exportToCSV}
             disabled={transactions.length === 0}
