@@ -13,18 +13,18 @@ export default function DashboardLayout({
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
       </div>
     )
   }
   
   if (!session || !session.user) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
-        <div className="text-center">
-          <p className="text-xl mb-4">Você precisa estar autenticado.</p>
-          <a href="/login" className="text-cyan-400 hover:text-cyan-300 underline">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-xl border border-slate-200/60">
+          <p className="text-xl mb-4 text-slate-800 font-semibold">Você precisa estar autenticado.</p>
+          <a href="/login" className="text-cyan-600 hover:text-cyan-700 font-medium underline decoration-2 underline-offset-2">
             Fazer Login
           </a>
         </div>
@@ -76,13 +76,13 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex">
       <Sidebar userRole={userRole} />
       
       <div className="flex-1 flex flex-col">
         <Header />
         
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-8 overflow-auto">
           {children}
         </main>
       </div>
