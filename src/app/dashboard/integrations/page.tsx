@@ -354,6 +354,73 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function createEvolutionInstance() {
+    setError('')
+    setSuccess('')
+    try {
+      const res = await apiClient.post('/integrations/evolution', evolutionForm)
+      if (res.data.status === 'ok') {
+        setSuccess(res.data.message || 'Instância criada com sucesso!')
+        setEvolutionStatus(res.data.instance)
+        if (res.data.instance?.connected) {
+          setShowEvolutionModal(false)
+          fetchIntegrations()
+        }
+      } else {
+        setError(res.data.message || 'Erro ao criar instância')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao criar instância')
+    }
+  }
+
+  async function checkEvolutionStatus() {
+    setCheckingEvolutionStatus(true)
+    try {
+      const res = await apiClient.get('/integrations/evolution')
+      if (res.data.status === 'ok') {
+        setEvolutionStatus(res.data.instance)
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao verificar status')
+    }
+    setCheckingEvolutionStatus(false)
+  }
+
+  async function disconnectEvolution() {
+    if (!confirm('Tem certeza que deseja remover esta instância do Evolution API?')) return
+    
+    setError('')
+    setSuccess('')
+    try {
+      const res = await apiClient.delete('/integrations/evolution')
+      if (res.data.status === 'ok') {
+        setSuccess('Instância removida com sucesso!')
+        setEvolutionStatus(null)
+        fetchIntegrations()
+      } else {
+        setError(res.data.message || 'Erro ao remover instância')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao remover instância')
+    }
+  }
+
+  function copyN8NConfig() {
+    if (!evolutionStatus?.n8nConfig) return
+    
+    const config = {
+      evolution_api_url: evolutionStatus.n8nConfig.apiUrl,
+      evolution_api_key: evolutionStatus.n8nConfig.apiKey,
+      evolution_instance_name: evolutionStatus.n8nConfig.instanceName,
+      evolution_token: evolutionStatus.n8nConfig.token,
+    }
+    
+    const configText = JSON.stringify(config, null, 2)
+    navigator.clipboard.writeText(configText)
+    setSuccess('Configuração copiada! Cole no seu workflow do N8N.')
+  }
+
   function getProviderName(provider: string) {
     switch (provider) {
       case 'google':
@@ -423,6 +490,8 @@ export default function IntegrationsPage() {
   const hasN8NIntegration = integrations.some(i => i.provider === 'n8n' && i.isActive)
   const n8nIntegration = integrations.find(i => i.provider === 'n8n' && i.isActive)
   const hasBankConnections = bankConnections.length > 0
+  const hasEvolutionIntegration = integrations.some(i => i.provider === 'evolution_api' && i.isActive)
+  const evolutionIntegration = integrations.find(i => i.provider === 'evolution_api' && i.isActive)
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -492,8 +561,120 @@ export default function IntegrationsPage() {
             <RiBankLine className="w-5 h-5" />
             Conectar Conta Bancária (Open Finance)
           </button>
+          <button
+            onClick={() => setShowEvolutionModal(true)}
+            disabled={hasEvolutionIntegration}
+            className={`px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
+              hasEvolutionIntegration
+                ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:shadow-lg hover:shadow-emerald-500/30'
+            }`}
+          >
+            <RiWhatsappFill className="w-5 h-5" />
+            {hasEvolutionIntegration ? 'Evolution API já configurada' : 'Configurar Evolution API (WhatsApp)'}
+          </button>
         </div>
       </div>
+
+      {/* Evolution API - Instância WhatsApp */}
+      {hasEvolutionIntegration && (
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 mb-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <RiWhatsappFill className="w-6 h-6 text-emerald-600" />
+            Instância WhatsApp (Evolution API)
+          </h2>
+          <div className="bg-gradient-to-br from-white to-emerald-50 rounded-xl p-6 border-2 border-emerald-200">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg text-slate-800 mb-2">Configuração para N8N</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Use as credenciais abaixo no seu workflow do N8N para processar mensagens do WhatsApp.
+                </p>
+                {evolutionStatus && evolutionStatus.n8nConfig && (
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-slate-700">Configuração N8N:</span>
+                      <button
+                        onClick={copyN8NConfig}
+                        className="px-3 py-1 text-xs bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
+                      >
+                        Copiar Config
+                      </button>
+                    </div>
+                    <pre className="text-xs text-slate-700 overflow-x-auto">
+                      {JSON.stringify(evolutionStatus.n8nConfig, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={checkEvolutionStatus}
+                  disabled={checkingEvolutionStatus}
+                  className="p-2 rounded-lg hover:bg-cyan-50 text-cyan-600 transition-colors"
+                  title="Atualizar status"
+                >
+                  {checkingEvolutionStatus ? (
+                    <div className="w-4 h-4 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <RiRefreshLine className="w-4 h-4" />
+                  )}
+                </button>
+                <button
+                  onClick={disconnectEvolution}
+                  className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                  title="Remover instância"
+                >
+                  <RiDeleteBinLine className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {evolutionStatus && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    {evolutionStatus.connected ? (
+                      <>
+                        <RiCheckboxCircleLine className="w-5 h-5 text-emerald-600" />
+                        <span className="font-medium text-emerald-700">WhatsApp Conectado</span>
+                      </>
+                    ) : (
+                      <>
+                        <RiCloseCircleLine className="w-5 h-5 text-red-600" />
+                        <span className="font-medium text-red-700">WhatsApp Desconectado</span>
+                      </>
+                    )}
+                  </div>
+                  <span className="text-xs text-slate-600">Estado: {evolutionStatus.state || 'unknown'}</span>
+                </div>
+
+                {evolutionStatus.qrcode && !evolutionStatus.connected && (
+                  <div className="p-4 bg-white rounded-lg border border-slate-200 text-center">
+                    <p className="text-sm font-medium text-slate-700 mb-3">Escaneie o QR Code para conectar:</p>
+                    <img 
+                      src={`data:image/png;base64,${evolutionStatus.qrcode}`} 
+                      alt="QR Code WhatsApp" 
+                      className="mx-auto w-64 h-64 border-2 border-slate-200 rounded-lg"
+                    />
+                    <p className="text-xs text-slate-500 mt-3">
+                      Abra o WhatsApp no celular → Menu → Aparelhos conectados → Conectar um aparelho
+                    </p>
+                  </div>
+                )}
+
+                {evolutionStatus.connected && (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <p className="text-sm text-emerald-800">
+                      ✅ <strong>Pronto para usar no N8N!</strong> Sua instância está conectada e pronta para processar mensagens.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Conexões Bancárias */}
       {hasBankConnections && (
@@ -1065,6 +1246,130 @@ export default function IntegrationsPage() {
                 <strong>Como funciona:</strong> Ao selecionar seu banco, você será redirecionado para a página de autorização do banco. 
                 Após autorizar, suas transações serão importadas automaticamente e categorizadas por IA.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Evolution API */}
+      {showEvolutionModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent flex items-center gap-2">
+                <RiWhatsappFill className="w-6 h-6 text-emerald-600" />
+                Configurar Evolution API
+              </h2>
+              <button
+                onClick={() => {
+                  setShowEvolutionModal(false)
+                  setEvolutionForm({ apiUrl: '', apiKey: '', instanceName: '' })
+                  setEvolutionStatus(null)
+                  setError('')
+                }}
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+              >
+                <RiCloseCircleLine className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Para usar no N8N:</strong> Configure sua instância do Evolution API aqui. 
+                Após conectar o WhatsApp, você receberá as credenciais para usar no seu workflow do N8N.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <RiServerLine className="w-4 h-4" />
+                  URL da Evolution API *
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://api.evolutionapi.com"
+                  value={evolutionForm.apiUrl}
+                  onChange={e => setEvolutionForm({ ...evolutionForm, apiUrl: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">URL base da sua instância Evolution API</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <RiKeyLine className="w-4 h-4" />
+                  API Key *
+                </label>
+                <input
+                  type="password"
+                  placeholder="Sua API Key da Evolution API"
+                  value={evolutionForm.apiKey}
+                  onChange={e => setEvolutionForm({ ...evolutionForm, apiKey: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">Chave de API fornecida pela Evolution API</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <RiQrCodeLine className="w-4 h-4" />
+                  Nome da Instância *
+                </label>
+                <input
+                  type="text"
+                  placeholder="minha-instancia-whatsapp"
+                  value={evolutionForm.instanceName}
+                  onChange={e => setEvolutionForm({ ...evolutionForm, instanceName: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">Nome único para sua instância do WhatsApp</p>
+              </div>
+            </div>
+
+            {evolutionStatus && evolutionStatus.qrcode && !evolutionStatus.connected && (
+              <div className="p-4 bg-white rounded-lg border border-slate-200 text-center">
+                <p className="text-sm font-medium text-slate-700 mb-3">Escaneie o QR Code para conectar:</p>
+                <img 
+                  src={`data:image/png;base64,${evolutionStatus.qrcode}`} 
+                  alt="QR Code WhatsApp" 
+                  className="mx-auto w-64 h-64 border-2 border-slate-200 rounded-lg"
+                />
+                <p className="text-xs text-slate-500 mt-3">
+                  Abra o WhatsApp no celular → Menu → Aparelhos conectados → Conectar um aparelho
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEvolutionModal(false)
+                  setEvolutionForm({ apiUrl: '', apiKey: '', instanceName: '' })
+                  setEvolutionStatus(null)
+                  setError('')
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={createEvolutionInstance}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:shadow-lg hover:shadow-emerald-500/30 transition-all font-medium"
+              >
+                {evolutionStatus ? 'Atualizar' : 'Criar Instância'}
+              </button>
             </div>
           </div>
         </div>
