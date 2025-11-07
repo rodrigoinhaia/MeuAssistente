@@ -1,19 +1,37 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import axios from 'axios'
-import { format } from 'date-fns'
-import { saveAs } from 'file-saver'
+import { useEffect, useState, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
+import apiClient from '@/lib/axios-config'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { saveAs } from 'file-saver'
+import {
+  RiAddLine,
+  RiEditLine,
+  RiDeleteBinLine,
+  RiMoneyDollarBoxLine,
+  RiArrowUpLine,
+  RiArrowDownLine,
+  RiSearchLine,
+  RiFilterLine,
+  RiDownloadLine,
+  RiUserLine,
+  RiCalendarLine,
+  RiPriceTag3Line,
+  RiCheckboxCircleLine,
+  RiTimeLine,
+  RiCloseCircleLine
+} from 'react-icons/ri'
 
 interface Transaction {
   id: string
   date: string
   description: string
   amount: string
-  type: string
-  status: string
-  category?: { name: string; color: string }
+  type: 'expense' | 'income'
+  status: 'pending' | 'paid' | 'overdue'
+  category?: { id: string; name: string; color: string }
   user?: { id: string; name: string; email: string }
 }
 
@@ -31,46 +49,46 @@ interface User {
 }
 
 export default function TransactionsPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const userRole = (session?.user as any)?.role || 'USER'
   const currentUserId = (session?.user as any)?.id
   
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [users, setUsers] = useState<User[]>([]) // Lista de membros da família
   const [form, setForm] = useState({
     description: '',
     amount: '',
-    type: 'expense',
+    type: 'expense' as 'expense' | 'income',
     categoryId: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    status: 'pending',
+    status: 'pending' as 'pending' | 'paid' | 'overdue',
   })
-  const [formError, setFormError] = useState('')
-  const [formLoading, setFormLoading] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [deleteLoading, setDeleteLoading] = useState(false)
   const [filter, setFilter] = useState({
     startDate: '',
     endDate: '',
     type: '',
     categoryId: '',
-    userId: '', // Novo filtro por usuário
+    userId: '',
     search: '',
+    status: '',
   })
 
   useEffect(() => {
-    fetchTransactions()
-    fetchCategories()
-    // Buscar lista de usuários se for OWNER
-    if (userRole === 'OWNER') {
-      fetchUsers()
+    if (status === 'authenticated') {
+      fetchTransactions()
+      fetchCategories()
+      if (userRole === 'OWNER') {
+        fetchUsers()
+      }
     }
-  }, [filter, userRole])
+  }, [status, filter, userRole])
 
   async function fetchTransactions() {
     setLoading(true)
@@ -81,28 +99,34 @@ export default function TransactionsPage() {
       if (filter.endDate) params.endDate = filter.endDate
       if (filter.type) params.type = filter.type
       if (filter.categoryId) params.categoryId = filter.categoryId
-      if (filter.userId) params.userId = filter.userId // Adicionar filtro por usuário
+      if (filter.userId) params.userId = filter.userId
       if (filter.search) params.search = filter.search
-      const res = await axios.get('/api/transactions', { params })
-      setTransactions(res.data.transactions)
+      if (filter.status) params.status = filter.status
+      
+      const res = await apiClient.get('/transactions', { params })
+      setTransactions(res.data.transactions || [])
     } catch (err: any) {
-      setError('Erro ao carregar transações')
+      setError(err.response?.data?.message || 'Erro ao carregar transações')
     }
     setLoading(false)
   }
 
   async function fetchCategories() {
     try {
-      const res = await axios.get('/api/categories')
-      setCategories(res.data.categories)
-    } catch {}
+      const res = await apiClient.get('/categories')
+      setCategories(res.data.categories || [])
+    } catch (err) {
+      // Ignorar erro
+    }
   }
 
   async function fetchUsers() {
     try {
-      const res = await axios.get('/api/users')
+      const res = await apiClient.get('/users')
       setUsers(res.data.users || [])
-    } catch {}
+    } catch (err) {
+      // Ignorar erro
+    }
   }
 
   function openEditModal(tx: Transaction) {
@@ -111,287 +135,471 @@ export default function TransactionsPage() {
       description: tx.description,
       amount: String(tx.amount),
       type: tx.type,
-      categoryId: tx.category ? (tx as any).category.id : '',
+      categoryId: tx.category?.id || '',
       date: format(new Date(tx.date), 'yyyy-MM-dd'),
       status: tx.status,
     })
     setShowModal(true)
   }
 
+  function openNewModal() {
+    setEditId(null)
+    setForm({
+      description: '',
+      amount: '',
+      type: 'expense',
+      categoryId: '',
+      date: format(new Date(), 'yyyy-MM-dd'),
+      status: 'pending',
+    })
+    setShowModal(true)
+  }
+
   async function handleSaveTransaction(e: React.FormEvent) {
     e.preventDefault()
-    setFormError('')
+    setError('')
+    setSuccess('')
+    
     if (!form.description.trim() || !form.amount || !form.categoryId || !form.date) {
-      setFormError('Preencha todos os campos obrigatórios.')
+      setError('Preencha todos os campos obrigatórios.')
       return
     }
-    setFormLoading(true)
+
     try {
-      if (editId) {
-        await axios.put(`/api/transactions/${editId}`, {
-          ...form,
-          amount: Number(form.amount.replace(',', '.')),
-        })
-      } else {
-        await axios.post('/api/transactions', {
-          ...form,
-          amount: Number(form.amount.replace(',', '.')),
-        })
+      const payload = {
+        ...form,
+        amount: Number(form.amount.replace(',', '.')),
       }
+
+      if (editId) {
+        await apiClient.put(`/transactions/${editId}`, payload)
+        setSuccess('Transação atualizada com sucesso!')
+      } else {
+        await apiClient.post('/transactions', payload)
+        setSuccess('Transação criada com sucesso!')
+      }
+      
       setShowModal(false)
-      setForm({ description: '', amount: '', type: 'expense', categoryId: '', date: format(new Date(), 'yyyy-MM-dd'), status: 'pending' })
       setEditId(null)
+      setForm({ description: '', amount: '', type: 'expense', categoryId: '', date: format(new Date(), 'yyyy-MM-dd'), status: 'pending' })
       fetchTransactions()
     } catch (err: any) {
-      setFormError(err.response?.data?.error || 'Erro ao salvar transação')
+      setError(err.response?.data?.message || 'Erro ao salvar transação')
     }
-    setFormLoading(false)
   }
 
   async function handleDeleteTransaction() {
     if (!deleteId) return
-    setDeleteLoading(true)
+    
     try {
-      await axios.delete(`/api/transactions/${deleteId}`)
+      await apiClient.delete(`/transactions/${deleteId}`)
+      setSuccess('Transação excluída com sucesso!')
       setDeleteId(null)
       fetchTransactions()
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao excluir transação')
+      setError(err.response?.data?.message || 'Erro ao excluir transação')
     }
-    setDeleteLoading(false)
   }
 
-  function exportToCSV(transactions: Transaction[]) {
-    const header = ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status']
+  function exportToCSV() {
+    const header = ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status', 'Responsável']
     const rows = transactions.map(tx => [
-      new Date(tx.date).toLocaleDateString(),
+      new Date(tx.date).toLocaleDateString('pt-BR'),
       tx.description,
       tx.category ? tx.category.name : '-',
       tx.type === 'expense' ? 'Despesa' : 'Receita',
       Number(tx.amount).toFixed(2).replace('.', ','),
       tx.status === 'paid' ? 'Paga' : tx.status === 'overdue' ? 'Vencida' : 'Pendente',
+      tx.user?.name || '-',
     ])
     const csv = [header, ...rows].map(r => r.join(';')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     saveAs(blob, `transacoes-${new Date().toISOString().slice(0,10)}.csv`)
   }
 
+  // Estatísticas calculadas
+  const stats = useMemo(() => {
+    const expenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0)
+    const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0)
+    const balance = income - expenses
+    const pending = transactions.filter(t => t.status === 'pending').length
+    const overdue = transactions.filter(t => t.status === 'overdue').length
+
+    return { expenses, income, balance, pending, overdue }
+  }, [transactions])
+
+  function getStatusConfig(status: string) {
+    switch (status) {
+      case 'paid':
+        return { 
+          color: 'bg-emerald-100 text-emerald-700 border-emerald-200', 
+          label: 'Paga',
+          icon: <RiCheckboxCircleLine className="w-4 h-4" />
+        }
+      case 'overdue':
+        return { 
+          color: 'bg-red-100 text-red-700 border-red-200', 
+          label: 'Vencida',
+          icon: <RiCloseCircleLine className="w-4 h-4" />
+        }
+      case 'pending':
+        return { 
+          color: 'bg-yellow-100 text-yellow-700 border-yellow-200', 
+          label: 'Pendente',
+          icon: <RiTimeLine className="w-4 h-4" />
+        }
+      default:
+        return { 
+          color: 'bg-slate-100 text-slate-700 border-slate-200', 
+          label: status,
+          icon: <RiTimeLine className="w-4 h-4" />
+        }
+    }
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
+      </div>
+    )
+  }
+
   return (
-    <main className="p-4 md:p-8 max-w-7xl w-full mx-auto bg-white dark:bg-black">
-      <h1 className="text-2xl font-bold mb-6">Transações</h1>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="flex flex-wrap gap-2 items-end">
-          <div>
-            <label className="block text-xs font-medium mb-1">Data inicial</label>
+    <div className="p-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
+            Transações
+          </h1>
+          <p className="text-slate-600 mt-1">Gerencie suas receitas e despesas</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={exportToCSV}
+            disabled={transactions.length === 0}
+            className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all font-medium flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RiDownloadLine className="w-5 h-5" />
+            <span className="hidden md:inline">Exportar CSV</span>
+          </button>
+          <button
+            onClick={openNewModal}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium flex items-center gap-2"
+          >
+            <RiAddLine className="w-5 h-5" />
+            Nova Transação
+          </button>
+        </div>
+      </div>
+
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4 border border-emerald-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <RiArrowUpLine className="w-5 h-5 text-emerald-600" />
+            <span className="text-sm font-medium text-emerald-700">Receitas</span>
+          </div>
+          <p className="text-2xl font-bold text-emerald-800">R$ {stats.income.toFixed(2)}</p>
+        </div>
+        <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <RiArrowDownLine className="w-5 h-5 text-red-600" />
+            <span className="text-sm font-medium text-red-700">Despesas</span>
+          </div>
+          <p className="text-2xl font-bold text-red-800">R$ {stats.expenses.toFixed(2)}</p>
+        </div>
+        <div className={`bg-gradient-to-br rounded-xl p-4 border shadow-sm ${
+          stats.balance >= 0 
+            ? 'from-cyan-50 to-cyan-100 border-cyan-200' 
+            : 'from-orange-50 to-orange-100 border-orange-200'
+        }`}>
+          <div className="flex items-center gap-2 mb-2">
+            <RiMoneyDollarBoxLine className={`w-5 h-5 ${stats.balance >= 0 ? 'text-cyan-600' : 'text-orange-600'}`} />
+            <span className={`text-sm font-medium ${stats.balance >= 0 ? 'text-cyan-700' : 'text-orange-700'}`}>Saldo</span>
+          </div>
+          <p className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-cyan-800' : 'text-orange-800'}`}>
+            R$ {stats.balance.toFixed(2)}
+          </p>
+        </div>
+        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-4 border border-yellow-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <RiTimeLine className="w-5 h-5 text-yellow-600" />
+            <span className="text-sm font-medium text-yellow-700">Pendentes</span>
+          </div>
+          <p className="text-2xl font-bold text-yellow-800">{stats.pending}</p>
+        </div>
+        <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <RiCloseCircleLine className="w-5 h-5 text-red-600" />
+            <span className="text-sm font-medium text-red-700">Vencidas</span>
+          </div>
+          <p className="text-2xl font-bold text-red-800">{stats.overdue}</p>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 p-6 mb-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 relative">
+            <RiSearchLine className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Buscar por descrição..."
+              value={filter.search}
+              onChange={(e) => setFilter({ ...filter, search: e.target.value })}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <input
               type="date"
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 border dark:border-gray-700"
               value={filter.startDate}
-              onChange={e => setFilter(f => ({ ...f, startDate: e.target.value }))}
-              title="Data inicial"
+              onChange={(e) => setFilter({ ...filter, startDate: e.target.value })}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
+              placeholder="Data inicial"
             />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Data final</label>
             <input
               type="date"
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 border dark:border-gray-700"
               value={filter.endDate}
-              onChange={e => setFilter(f => ({ ...f, endDate: e.target.value }))}
-              title="Data final"
+              onChange={(e) => setFilter({ ...filter, endDate: e.target.value })}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
+              placeholder="Data final"
             />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Tipo</label>
             <select
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 border dark:border-gray-700"
               value={filter.type}
-              onChange={e => setFilter(f => ({ ...f, type: e.target.value }))}
-              title="Tipo da transação"
+              onChange={(e) => setFilter({ ...filter, type: e.target.value, categoryId: '' })}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
             >
-              <option value="">Todos</option>
+              <option value="">Todos os tipos</option>
               <option value="expense">Despesa</option>
               <option value="income">Receita</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Categoria</label>
             <select
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 border dark:border-gray-700"
               value={filter.categoryId}
-              onChange={e => setFilter(f => ({ ...f, categoryId: e.target.value }))}
-              title="Categoria da transação"
+              onChange={(e) => setFilter({ ...filter, categoryId: e.target.value })}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
             >
-              <option value="">Todas</option>
+              <option value="">Todas as categorias</option>
               {categories
                 .filter(cat => !filter.type || cat.type === filter.type)
                 .map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
             </select>
-          </div>
-          {(userRole === 'OWNER') && (
-            <div>
-              <label className="block text-xs font-medium mb-1">Membro</label>
+            {userRole === 'OWNER' && (
               <select
-                className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border dark:border-gray-700"
                 value={filter.userId}
-                onChange={e => setFilter(f => ({ ...f, userId: e.target.value }))}
+                onChange={(e) => setFilter({ ...filter, userId: e.target.value })}
+                className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
               >
-                <option value="">Todos</option>
+                <option value="">Todos os membros</option>
                 {users.map(user => (
                   <option key={user.id} value={user.id}>{user.name}</option>
                 ))}
               </select>
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-medium mb-1">Buscar</label>
-            <input
-              type="text"
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 border dark:border-gray-700"
-              placeholder="Descrição"
-              title="Descrição da transação"
-              value={filter.search}
-              onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
-            />
+            )}
+            {userRole === 'OWNER' && (
+              <select
+                value={filter.status}
+                onChange={(e) => setFilter({ ...filter, status: e.target.value })}
+                className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
+              >
+                <option value="">Todos os status</option>
+                <option value="pending">Pendente</option>
+                <option value="paid">Paga</option>
+                <option value="overdue">Vencida</option>
+              </select>
+            )}
           </div>
         </div>
-        <div className="flex gap-2">
+      </div>
+
+      {/* Mensagens */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 shadow-sm">
+          {success}
+        </div>
+      )}
+
+      {/* Lista de Transações */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : transactions.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-12 text-center shadow-sm">
+          <div className="text-6xl mb-4">💰</div>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">Nenhuma transação encontrada</h3>
+          <p className="text-slate-600 mb-6">Crie sua primeira transação para começar!</p>
           <button
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            onClick={() => setShowModal(true)}
+            onClick={openNewModal}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium"
           >
-            + Nova Transação
-          </button>
-          <button
-            className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 border"
-            onClick={() => exportToCSV(transactions)}
-            disabled={transactions.length === 0}
-          >
-            Exportar CSV
+            Criar Transação
           </button>
         </div>
-      </div>
-      {error && <div className="text-red-600 mb-4">{error}</div>}
-      {loading ? (
-        <div>Carregando transações...</div>
-      ) : transactions.length === 0 ? (
-        <div className="text-gray-500">Nenhuma transação cadastrada.</div>
       ) : (
-        <table className="w-full bg-white dark:bg-gray-900 rounded shadow border">
-          <thead className="bg-gray-100 dark:bg-gray-800 dark:text-gray-100">
-            <tr className="bg-gray-100 dark:bg-gray-800">
-              <th className="p-2 text-left">Data</th>
-              <th className="p-2 text-left">Descrição</th>
-              <th className="p-2 text-left">Responsável</th>
-              <th className="p-2 text-left">Categoria</th>
-              <th className="p-2 text-left">Tipo</th>
-              <th className="p-2 text-left">Valor</th>
-              <th className="p-2 text-left">Status</th>
-              <th className="p-2"></th>
-            </tr>
-          </thead>
-          <tbody className="dark:bg-gray-900 dark:text-gray-100">
-            {transactions.map(tx => {
-              const canEdit = userRole === 'OWNER' || (userRole === 'USER' && tx.user?.id === currentUserId)
-              return (
-                <tr key={tx.id} className="border-b dark:border-gray-700">
-                  <td className="p-2">{new Date(tx.date).toLocaleDateString()}</td>
-                  <td className="p-2">{tx.description}</td>
-                  <td className="p-2">
-                    {tx.user ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-cyan-500/20 text-cyan-400">
-                        <span>👤</span>
-                        {tx.user.name}
-                      </span>
-                    ) : '-'}
-                  </td>
-                  <td className="p-2">
-                    {tx.category ? (
-                      <span className="inline-block w-5 h-5 rounded-full border transaction-color" style={{ '--transaction-color': tx.category.color } as React.CSSProperties}>
-                      </span>
-                    ) : '-'}
-                  </td>
-                  <td className="p-2">{tx.type === 'expense' ? 'Despesa' : 'Receita'}</td>
-                  <td className="p-2 font-mono">R$ {Number(tx.amount).toFixed(2)}</td>
-                  <td className="p-2">
-                    <span className={tx.status === 'paid' ? 'text-green-700' : tx.status === 'overdue' ? 'text-red-700' : 'text-yellow-700'}>
-                      {tx.status === 'paid' ? 'Paga' : tx.status === 'overdue' ? 'Vencida' : 'Pendente'}
-                    </span>
-                  </td>
-                  <td className="p-2 text-right">
+        <div className="space-y-3">
+          {transactions.map(tx => {
+            const canEdit = userRole === 'OWNER' || (userRole === 'USER' && tx.user?.id === currentUserId)
+            const statusConfig = getStatusConfig(tx.status)
+            const isExpense = tx.type === 'expense'
+            
+            return (
+              <div
+                key={tx.id}
+                className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-4 border border-slate-200 hover:shadow-md transition-all group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {/* Ícone de tipo */}
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
+                      isExpense 
+                        ? 'bg-gradient-to-br from-red-100 to-red-200 text-red-600' 
+                        : 'bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-600'
+                    }`}>
+                      {isExpense ? (
+                        <RiArrowDownLine className="w-6 h-6" />
+                      ) : (
+                        <RiArrowUpLine className="w-6 h-6" />
+                      )}
+                    </div>
+
+                    {/* Informações principais */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold text-slate-800 truncate">{tx.description}</h3>
+                        {tx.category && (
+                          <span 
+                            className="flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5"
+                            style={{ 
+                              backgroundColor: `${tx.category.color}20`,
+                              color: tx.category.color,
+                              borderColor: `${tx.category.color}40`
+                            }}
+                          >
+                            <RiPriceTag3Line className="w-3 h-3" />
+                            {tx.category.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                          <RiCalendarLine className="w-4 h-4" />
+                          {format(new Date(tx.date), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
+                        </span>
+                        {tx.user && (
+                          <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                            <RiUserLine className="w-4 h-4" />
+                            {tx.user.name}
+                          </span>
+                        )}
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 ${statusConfig.color}`}>
+                          {statusConfig.icon}
+                          {statusConfig.label}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Valor */}
+                    <div className="flex-shrink-0 text-right ml-4">
+                      <p className={`text-xl font-bold ${isExpense ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {isExpense ? '-' : '+'} R$ {Number(tx.amount).toFixed(2)}
+                      </p>
+                    </div>
+
+                    {/* Ações */}
                     {canEdit && (
-                      <button className="text-blue-600 hover:bg-blue-100 rounded p-1" onClick={() => openEditModal(tx)} title="Editar" aria-label="Editar">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6h6v-2a2 2 0 012-2h2a2 2 0 012 2v2h6" /></svg>
-                      </button>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
+                        <button
+                          onClick={() => openEditModal(tx)}
+                          className="p-2 rounded-lg bg-cyan-50 text-cyan-600 hover:bg-cyan-100 border border-transparent hover:border-cyan-200 transition-colors"
+                          title="Editar"
+                        >
+                          <RiEditLine className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(tx.id)}
+                          className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-transparent hover:border-red-200 transition-colors"
+                          title="Excluir"
+                        >
+                          <RiDeleteBinLine className="w-5 h-5" />
+                        </button>
+                      </div>
                     )}
-                    {canEdit && (
-                      <button className="text-red-600 hover:bg-red-100 rounded p-1" onClick={() => setDeleteId(tx.id)} title="Excluir" aria-label="Excluir">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4a2 2 0 012 2v2H7V5a2 2 0 012-2zm0 0V3m0 2v2" /></svg>
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       )}
-      {showModal ? (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-md border border-gray-200 dark:border-gray-800 transition-all">
-            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">{editId ? 'Editar Transação' : 'Nova Transação'}</h2>
-            <form onSubmit={handleSaveTransaction} className="space-y-5">
+
+      {/* Modal de Formulário */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <form
+            onSubmit={handleSaveTransaction}
+            className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60 space-y-6 max-h-[90vh] overflow-y-auto"
+          >
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
+              {editId ? 'Editar Transação' : 'Nova Transação'}
+            </h2>
+
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-2 text-gray-500 dark:text-gray-400">Descrição *</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Descrição *</label>
                 <input
                   type="text"
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600 transition"
                   value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="Digite a descrição"
                   required
-                  placeholder="Descrição"
-                  title="Descrição da transação"
-                  autoFocus
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-semibold mb-2 text-gray-500 dark:text-gray-400">Valor (R$) *</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Valor (R$) *</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600 transition"
                   value={form.amount}
-                  onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="0.00"
                   required
-                  placeholder="Valor da transação"
-                  title="Valor da transação"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-2 text-gray-500 dark:text-gray-400">Tipo *</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Tipo *</label>
                   <select
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600 transition"
                     value={form.type}
-                    onChange={e => setForm(f => ({ ...f, type: e.target.value, categoryId: '' }))}
+                    onChange={(e) => setForm({ ...form, type: e.target.value as 'expense' | 'income', categoryId: '' })}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                     required
-                    title="Tipo da transação"
                   >
                     <option value="expense">Despesa</option>
                     <option value="income">Receita</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-2 text-gray-500 dark:text-gray-400">Categoria *</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Categoria *</label>
                   <select
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600 transition"
                     value={form.categoryId}
-                    onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                    onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                     required
-                    title="Categoria da transação"
                   >
                     <option value="">Selecione</option>
                     {categories.filter(c => c.type === form.type).map(cat => (
@@ -400,26 +608,25 @@ export default function TransactionsPage() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-2 text-gray-500 dark:text-gray-400">Data *</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Data *</label>
                   <input
                     type="date"
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600 transition"
                     value={form.date}
-                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                     required
-                    title="Data da transação"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-2 text-gray-500 dark:text-gray-400">Status *</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Status *</label>
                   <select
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600 transition"
                     value={form.status}
-                    onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                    onChange={(e) => setForm({ ...form, status: e.target.value as 'pending' | 'paid' | 'overdue' })}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                     required
-                    title="Status da transação"
                   >
                     <option value="pending">Pendente</option>
                     <option value="paid">Paga</option>
@@ -427,46 +634,54 @@ export default function TransactionsPage() {
                   </select>
                 </div>
               </div>
-              {formError && <div className="text-red-600 text-sm">{formError}</div>}
-              <div className="flex justify-end gap-2 mt-6">
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                  onClick={() => { setShowModal(false); setEditId(null); }}
-                  disabled={formLoading}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 transition disabled:opacity-50 font-semibold"
-                  disabled={formLoading}
-                >
-                  {formLoading ? 'Salvando...' : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-      {deleteId && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded shadow-lg p-6 w-full max-w-sm">
-            <h2 className="text-lg font-bold mb-4 text-red-700">Excluir Transação</h2>
-            <p className="mb-4">Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
-            <div className="flex justify-end gap-2">
-              <button className="px-4 py-2" onClick={() => setDeleteId(null)} disabled={deleteLoading}>Cancelar</button>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
               <button
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
-                onClick={handleDeleteTransaction}
-                disabled={deleteLoading}
+                type="button"
+                onClick={() => {
+                  setShowModal(false)
+                  setEditId(null)
+                  setForm({ description: '', amount: '', type: 'expense', categoryId: '', date: format(new Date(), 'yyyy-MM-dd'), status: 'pending' })
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
               >
-                {deleteLoading ? 'Excluindo...' : 'Excluir'}
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium"
+              >
+                {editId ? 'Salvar Alterações' : 'Criar Transação'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {deleteId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm border border-slate-200/60 space-y-6">
+            <h2 className="text-xl font-bold text-red-700">Confirmar Exclusão</h2>
+            <p className="text-slate-600">Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteTransaction}
+                className="px-4 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-medium"
+              >
+                Excluir
               </button>
             </div>
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
-} 
+}
