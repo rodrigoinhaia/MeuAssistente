@@ -18,7 +18,13 @@ import {
   RiErrorWarningLine,
   RiCheckLine,
   RiPlugLine,
-  RiSettings3Line
+  RiSettings3Line,
+  RiWhatsappFill,
+  RiLink,
+  RiKeyLine,
+  RiServerLine,
+  RiQrCodeLine,
+  RiDeleteBinLine
 } from 'react-icons/ri'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -52,6 +58,14 @@ export default function IntegrationsPage() {
   const [syncResults, setSyncResults] = useState<any[]>([])
   const [syncHistory, setSyncHistory] = useState<SyncHistory[]>([])
   const [syncing, setSyncing] = useState<string | null>(null)
+  const [showN8NModal, setShowN8NModal] = useState(false)
+  const [n8nForm, setN8nForm] = useState({
+    n8nUrl: '',
+    n8nApiKey: '',
+    webhookUrl: '',
+  })
+  const [n8nStatus, setN8nStatus] = useState<any>(null)
+  const [checkingStatus, setCheckingStatus] = useState(false)
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -175,19 +189,101 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function connectN8N() {
+    setError('')
+    setSuccess('')
+    try {
+      const res = await apiClient.post('/integrations/n8n', n8nForm)
+      if (res.data.status === 'ok') {
+        setSuccess('N8N conectado com sucesso!')
+        setShowN8NModal(false)
+        setN8nForm({ n8nUrl: '', n8nApiKey: '', webhookUrl: '' })
+        fetchIntegrations()
+      } else {
+        setError(res.data.message || 'Erro ao conectar N8N')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao conectar N8N')
+    }
+  }
+
+  async function checkN8NStatus() {
+    setCheckingStatus(true)
+    try {
+      const res = await apiClient.get('/integrations/n8n')
+      if (res.data.status === 'ok') {
+        setN8nStatus(res.data.n8n)
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao verificar status')
+    }
+    setCheckingStatus(false)
+  }
+
+  async function disconnectN8N() {
+    if (!confirm('Tem certeza que deseja desconectar o N8N?')) return
+    
+    setError('')
+    setSuccess('')
+    try {
+      const res = await apiClient.delete('/integrations/n8n')
+      if (res.data.status === 'ok') {
+        setSuccess('N8N desconectado com sucesso!')
+        setN8nStatus(null)
+        fetchIntegrations()
+      } else {
+        setError(res.data.message || 'Erro ao desconectar N8N')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao desconectar N8N')
+    }
+  }
+
   function getProviderName(provider: string) {
     switch (provider) {
       case 'google':
         return 'Google Calendar & Tasks'
+      case 'n8n':
+        return 'N8N (Automações & WhatsApp)'
       default:
         return provider
+    }
+  }
+
+  function getProviderIcon(provider: string) {
+    switch (provider) {
+      case 'google':
+        return <RiGoogleFill className="w-6 h-6" />
+      case 'n8n':
+        return <RiRadarLine className="w-6 h-6" />
+      default:
+        return <RiPlugLine className="w-6 h-6" />
+    }
+  }
+
+  function getProviderColor(provider: string) {
+    switch (provider) {
+      case 'google':
+        return 'from-blue-500 to-blue-600'
+      case 'n8n':
+        return 'from-purple-500 to-indigo-600'
+      default:
+        return 'from-slate-500 to-slate-600'
     }
   }
 
   function getScopeDescription(scope: string) {
     if (scope?.includes('calendar')) return 'Calendário e Compromissos'
     if (scope?.includes('tasks')) return 'Tarefas'
-    return scope
+    try {
+      const parsed = JSON.parse(scope || '{}')
+      if (parsed.n8nUrl) {
+        return `N8N: ${parsed.n8nUrl}`
+      }
+    } catch {
+      // Não é JSON, retorna como está
+    }
+    return scope || 'Automações e Processamento'
   }
 
   if (status === 'loading') {
@@ -209,6 +305,8 @@ export default function IntegrationsPage() {
   }
 
   const hasGoogleIntegration = integrations.some(i => i.provider === 'google' && i.isActive)
+  const hasN8NIntegration = integrations.some(i => i.provider === 'n8n' && i.isActive)
+  const n8nIntegration = integrations.find(i => i.provider === 'n8n' && i.isActive)
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -259,6 +357,18 @@ export default function IntegrationsPage() {
             <RiGoogleFill className="w-5 h-5" />
             {connecting ? 'Conectando...' : hasGoogleIntegration ? 'Google já conectado' : 'Conectar Google Calendar & Tasks'}
           </button>
+          <button
+            onClick={() => setShowN8NModal(true)}
+            disabled={hasN8NIntegration}
+            className={`px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
+              hasN8NIntegration
+                ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:shadow-lg hover:shadow-purple-500/30'
+            }`}
+          >
+            <RiRadarLine className="w-5 h-5" />
+            {hasN8NIntegration ? 'N8N já conectado' : 'Conectar N8N (Automações & WhatsApp)'}
+          </button>
         </div>
       </div>
 
@@ -286,23 +396,91 @@ export default function IntegrationsPage() {
                 className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-6 border-2 border-slate-200 hover:border-cyan-300 transition-all hover:shadow-md"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
-                      <RiGoogleFill className="w-6 h-6" />
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getProviderColor(integration.provider)} flex items-center justify-center text-white flex-shrink-0`}>
+                      {getProviderIcon(integration.provider)}
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg text-slate-800">{getProviderName(integration.provider)}</h3>
-                      <p className="text-sm text-slate-600">{getScopeDescription(integration.scope)}</p>
+                      <p className="text-sm text-slate-600 truncate">{getScopeDescription(integration.scope)}</p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                    integration.isActive
-                      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                      : 'bg-red-100 text-red-700 border-red-200'
-                  }`}>
-                    {integration.isActive ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {integration.provider === 'n8n' && (
+                      <button
+                        onClick={checkN8NStatus}
+                        disabled={checkingStatus}
+                        className="p-2 rounded-lg hover:bg-cyan-50 text-cyan-600 transition-colors"
+                        title="Verificar status"
+                      >
+                        {checkingStatus ? (
+                          <div className="w-4 h-4 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <RiRefreshLine className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
+                    {integration.provider === 'n8n' && (
+                      <button
+                        onClick={disconnectN8N}
+                        className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                        title="Desconectar"
+                      >
+                        <RiDeleteBinLine className="w-4 h-4" />
+                      </button>
+                    )}
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                      integration.isActive
+                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                        : 'bg-red-100 text-red-700 border-red-200'
+                    }`}>
+                      {integration.isActive ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
                 </div>
+                {integration.provider === 'n8n' && n8nStatus && (
+                  <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {n8nStatus.connected ? (
+                          <>
+                            <RiCheckboxCircleLine className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm font-medium text-emerald-700">Conectado</span>
+                          </>
+                        ) : (
+                          <>
+                            <RiCloseCircleLine className="w-4 h-4 text-red-600" />
+                            <span className="text-sm font-medium text-red-700">Desconectado</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                      <div>
+                        <span className="font-medium">Workflows:</span> {n8nStatus.totalWorkflows} total, {n8nStatus.activeWorkflows} ativos
+                      </div>
+                      <div>
+                        <span className="font-medium">URL:</span> {n8nStatus.url}
+                      </div>
+                    </div>
+                    {n8nStatus.workflows && n8nStatus.workflows.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-slate-700 mb-1">Workflows Ativos:</p>
+                        <ul className="text-xs text-slate-600 space-y-1">
+                          {n8nStatus.workflows.slice(0, 3).map((w: any) => (
+                            <li key={w.id} className="flex items-center gap-1">
+                              <RiCheckboxCircleLine className="w-3 h-3 text-emerald-600" />
+                              {w.name}
+                            </li>
+                          ))}
+                          {n8nStatus.workflows.length > 3 && (
+                            <li className="text-slate-500">+{n8nStatus.workflows.length - 3} mais</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-2 text-sm text-slate-600">
                   <div className="flex items-center gap-2">
                     <RiTimeLine className="w-4 h-4" />
@@ -504,6 +682,113 @@ export default function IntegrationsPage() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal N8N */}
+      {showN8NModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-500 bg-clip-text text-transparent flex items-center gap-2">
+                <RiRadarLine className="w-6 h-6 text-purple-600" />
+                Conectar N8N
+              </h2>
+              <button
+                onClick={() => {
+                  setShowN8NModal(false)
+                  setN8nForm({ n8nUrl: '', n8nApiKey: '', webhookUrl: '' })
+                  setError('')
+                }}
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+              >
+                <RiCloseCircleLine className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <RiServerLine className="w-4 h-4" />
+                  URL do N8N *
+                </label>
+                <input
+                  type="url"
+                  placeholder="http://localhost:5678 ou https://n8n.seudominio.com"
+                  value={n8nForm.n8nUrl}
+                  onChange={e => setN8nForm({ ...n8nForm, n8nUrl: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">URL base da sua instância N8N</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <RiKeyLine className="w-4 h-4" />
+                  API Key do N8N *
+                </label>
+                <input
+                  type="password"
+                  placeholder="Sua API Key do N8N"
+                  value={n8nForm.n8nApiKey}
+                  onChange={e => setN8nForm({ ...n8nForm, n8nApiKey: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">Chave de API gerada no N8N (Settings → API)</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <RiLink className="w-4 h-4" />
+                  Webhook URL (opcional)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://seu-dominio.com/api/webhooks/n8n"
+                  value={n8nForm.webhookUrl}
+                  onChange={e => setN8nForm({ ...n8nForm, webhookUrl: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                />
+                <p className="text-xs text-slate-500 mt-1">URL para receber webhooks do N8N (padrão será gerado automaticamente)</p>
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-xs text-blue-800">
+                  <strong>💡 Dica:</strong> O N8N será responsável por processar mensagens do WhatsApp. 
+                  Configure workflows no N8N que se conectem com Evolution API ou outro provedor de WhatsApp.
+                </p>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowN8NModal(false)
+                  setN8nForm({ n8nUrl: '', n8nApiKey: '', webhookUrl: '' })
+                  setError('')
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={connectN8N}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:shadow-lg hover:shadow-purple-500/30 transition-all font-medium"
+              >
+                Conectar
+              </button>
+            </div>
           </div>
         </div>
       )}
