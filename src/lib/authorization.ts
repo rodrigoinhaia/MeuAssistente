@@ -6,6 +6,10 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions'
  * @param req Request do handler
  * @param allowedRoles Array de roles permitidos (ex: ['OWNER', 'ADMIN'])
  * @returns { session, role, familyId } ou { error }
+ * 
+ * IMPORTANTE:
+ * - SUPER_ADMIN: familyId será null para indicar acesso global (todas as famílias)
+ * - OUTROS ROLES: familyId será o ID da família do usuário (acesso restrito)
  */
 export async function requireAuth(req: Request, allowedRoles: string[] = []) {
   try {
@@ -17,14 +21,21 @@ export async function requireAuth(req: Request, allowedRoles: string[] = []) {
     }
 
     const { role, familyId } = session.user as { role?: string; familyId?: string }
-    if (!role || !familyId) {
-      console.error('Role ou familyId não encontrados na sessão', { role, familyId })
+    if (!role) {
+      console.error('Role não encontrado na sessão', { role, familyId })
       return { error: { status: 401, message: 'Sessão inválida.' } }
     }
 
-    // SUPER_ADMIN pode acessar tudo
+    // SUPER_ADMIN pode acessar tudo (não precisa de familyId)
     if (role === 'SUPER_ADMIN') {
-      return { session, role, familyId }
+      // SUPER_ADMIN sempre tem acesso, independente de allowedRoles
+      return { session, role, familyId: null } // null indica acesso global
+    }
+
+    // Para outros roles, familyId é obrigatório
+    if (!familyId) {
+      console.error('FamilyId não encontrado na sessão (exceto SUPER_ADMIN)', { role, familyId })
+      return { error: { status: 401, message: 'Sessão inválida.' } }
     }
 
     // Verifica permissões para outros roles

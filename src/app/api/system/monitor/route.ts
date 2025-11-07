@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db'
 import os from 'os'
 
 export async function GET(req: Request) {
-  const { session, role, error } = await requireAuth(req, ['OWNER', 'ADMIN', 'SUPER_ADMIN'])
+  const { session, role, error } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }

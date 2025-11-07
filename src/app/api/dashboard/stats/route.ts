@@ -9,6 +9,9 @@ export async function GET(req: Request) {
   }
 
   try {
+    // SUPER_ADMIN vê estatísticas agregadas de todas as famílias, outros roles só da sua família
+    const whereBase = role === 'SUPER_ADMIN' ? {} : { familyId }
+    
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today)
@@ -20,7 +23,7 @@ export async function GET(req: Request) {
     // Receber hoje (transações de receita com data de hoje e status pending ou paid)
     const receiveToday = await prisma.transaction.aggregate({
       where: {
-        familyId,
+        ...whereBase,
         type: 'income',
         date: {
           gte: today,
@@ -36,7 +39,7 @@ export async function GET(req: Request) {
     // Receber restante do mês (transações de receita do mês atual)
     const receiveMonth = await prisma.transaction.aggregate({
       where: {
-        familyId,
+        ...whereBase,
         type: 'income',
         date: {
           gte: startOfMonth,
@@ -52,7 +55,7 @@ export async function GET(req: Request) {
     // Pagar hoje (transações de despesa com data de hoje e status pending ou paid)
     const payToday = await prisma.transaction.aggregate({
       where: {
-        familyId,
+        ...whereBase,
         type: 'expense',
         date: {
           gte: today,
@@ -68,7 +71,7 @@ export async function GET(req: Request) {
     // Pagar restante do mês (transações de despesa do mês atual)
     const payMonth = await prisma.transaction.aggregate({
       where: {
-        familyId,
+        ...whereBase,
         type: 'expense',
         date: {
           gte: startOfMonth,
@@ -84,7 +87,7 @@ export async function GET(req: Request) {
     // Recebimentos em atraso (transações de receita com dueDate passado e status pending)
     const overdueIncome = await prisma.transaction.aggregate({
       where: {
-        familyId,
+        ...whereBase,
         type: 'income',
         status: 'pending',
         dueDate: {
@@ -99,7 +102,7 @@ export async function GET(req: Request) {
     // Pagamentos em atraso (transações de despesa com dueDate passado e status pending)
     const overdueExpense = await prisma.transaction.aggregate({
       where: {
-        familyId,
+        ...whereBase,
         type: 'expense',
         status: 'pending',
         dueDate: {
@@ -114,7 +117,7 @@ export async function GET(req: Request) {
     // Receitas totais (mês atual)
     const totalIncome = await prisma.transaction.aggregate({
       where: {
-        familyId,
+        ...whereBase,
         type: 'income',
         date: {
           gte: startOfMonth,
@@ -130,7 +133,7 @@ export async function GET(req: Request) {
     // Despesas totais (mês atual)
     const totalExpense = await prisma.transaction.aggregate({
       where: {
-        familyId,
+        ...whereBase,
         type: 'expense',
         date: {
           gte: startOfMonth,

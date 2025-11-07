@@ -58,21 +58,7 @@ async function main() {
   })
   console.log(`Created OWNER user: ${owner.email}`)
 
-  // 3. Criar um usuário ADMIN para a família do OWNER
-  const adminUser = await prisma.user.create({
-    data: {
-      name: 'Esposa Admin',
-      email: 'esposa@teste.com',
-      password: await bcrypt.hash('esposa123', 10),
-      cpf: '22233344455',
-      phone: '11987654322',
-      role: UserRole.ADMIN,
-      familyId: ownerFamily.id,
-    },
-  })
-  console.log(`Created ADMIN user: ${adminUser.email}`)
-
-  // 4. Criar um usuário USER comum para a família do OWNER
+  // 3. Criar um usuário USER comum para a família do OWNER
   const commonUser = await prisma.user.create({
     data: {
       name: 'Filho User',

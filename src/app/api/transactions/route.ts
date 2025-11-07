@@ -19,18 +19,21 @@ export async function GET(req: Request) {
   const filterUserId = searchParams.get('userId') // Novo filtro opcional
   
   try {
-    const where: any = { familyId }
+    // SUPER_ADMIN vê todas as transações, outros roles filtram por família
+    const where: any = role === 'SUPER_ADMIN' ? {} : { familyId }
     
     // Controle de permissões: USER só vê suas próprias transações
-    // ADMIN e OWNER podem ver todas da família ou filtrar por usuário específico
+    // OWNER pode ver todas da família ou filtrar por usuário específico
+    // SUPER_ADMIN vê todas as transações de todas as famílias
     if (role === 'USER') {
       // USER sempre vê apenas suas próprias transações
       where.userId = userId
-    } else if (filterUserId) {
-      // ADMIN/OWNER podem filtrar por usuário específico se fornecido
+    } else if (role !== 'SUPER_ADMIN' && filterUserId) {
+      // OWNER pode filtrar por usuário específico se fornecido
       where.userId = filterUserId
     }
-    // Se for ADMIN/OWNER e não fornecer filterUserId, vê todas da família
+    // Se for OWNER e não fornecer filterUserId, vê todas da família
+    // Se for SUPER_ADMIN, vê todas as transações
     
     if (startDate && endDate) {
       where.date = { gte: new Date(startDate), lte: new Date(endDate) }

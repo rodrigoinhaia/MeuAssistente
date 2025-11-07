@@ -5,11 +5,13 @@ import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/authorization'
 
 export async function GET(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'ADMIN'])
+  // Apenas SUPER_ADMIN pode ver todas as famílias
+  const { session, role, familyId, error } = await requireAuth(req, ['SUPER_ADMIN'])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
   try {
+    // SUPER_ADMIN vê todas as famílias
     const families = await prisma.family.findMany({
       select: {
         id: true,
@@ -28,7 +30,8 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'ADMIN'])
+  // Apenas SUPER_ADMIN pode editar famílias
+  const { session, role, familyId, error } = await requireAuth(req, ['SUPER_ADMIN'])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }

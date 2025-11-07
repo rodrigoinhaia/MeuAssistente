@@ -22,10 +22,10 @@ interface SidebarProps {
 // Definição dos itens do menu
 const allMenuItems = [
   { href: '/dashboard', icon: RiDashboardLine, label: 'Dashboard' },
-  { href: '/dashboard/users', icon: RiShieldUserLine, label: 'Usuários', roles: ['OWNER', 'ADMIN'] },
+  { href: '/dashboard/users', icon: RiShieldUserLine, label: 'Usuários', roles: ['OWNER'] },
   { href: '/dashboard/clients', icon: RiTeamLine, label: 'Clientes', roles: ['SUPER_ADMIN'] },
-  { href: '/dashboard/plans', icon: RiPriceTag3Line, label: 'Planos', roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN'] },
-  { href: '/dashboard/subscriptions', icon: RiFileListLine, label: 'Assinaturas', roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN'] },
+  { href: '/dashboard/plans', icon: RiPriceTag3Line, label: 'Planos', roles: ['SUPER_ADMIN', 'OWNER'] },
+  { href: '/dashboard/subscriptions', icon: RiFileListLine, label: 'Assinaturas', roles: ['SUPER_ADMIN', 'OWNER'] },
   { href: '/dashboard/payments', icon: RiMoneyDollarBoxLine, label: 'Pagamentos' },
   { href: '/dashboard/reports', icon: RiFileChartLine, label: 'Relatórios' },
   { href: '/dashboard/settings', icon: RiSettings4Line, label: 'Configurações' },

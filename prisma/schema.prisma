@@ -275,7 +275,6 @@ model SyncLog {
 enum UserRole {
   SUPER_ADMIN
   OWNER
-  ADMIN
   USER
 }
 

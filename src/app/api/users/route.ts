@@ -5,18 +5,19 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireAuth(request, ['OWNER', 'ADMIN']);
+  const authResult = await requireAuth(request, ['OWNER', 'SUPER_ADMIN']);
   if (authResult.error) {
     return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status });
   }
 
-  const { familyId } = authResult;
+  const { role, familyId } = authResult;
 
   try {
+    // SUPER_ADMIN vê todos os usuários, outros roles só da sua família
+    const whereClause = role === 'SUPER_ADMIN' ? {} : { familyId };
+    
     const users = await prisma.user.findMany({
-      where: {
-        familyId: familyId,
-      },
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  const authResult = await requireAuth(request, ['OWNER', 'ADMIN']);
+  const authResult = await requireAuth(request, ['OWNER', 'SUPER_ADMIN']);
   if (authResult.error) {
     return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status });
   }
@@ -52,6 +53,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'ID do usuário é obrigatório.' }, { status: 400 });
     }
     
+    const { role: userRole, familyId } = authResult;
+    
     // Fetch the user to be updated to check their current role and family
     const userToUpdate = await prisma.user.findUnique({
         where: {
@@ -59,8 +62,13 @@ export async function PATCH(request: NextRequest) {
         },
     });
 
-    if (!userToUpdate || userToUpdate.familyId !== authResult.familyId) {
-        return NextResponse.json({ error: 'Usuário não encontrado ou não pertence a esta família.' }, { status: 404 });
+    if (!userToUpdate) {
+        return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
+    }
+
+    // SUPER_ADMIN pode editar qualquer usuário, outros roles só da sua família
+    if (userRole !== 'SUPER_ADMIN' && userToUpdate.familyId !== familyId) {
+        return NextResponse.json({ error: 'Usuário não pertence a esta família.' }, { status: 403 });
     }
 
     // Security validations

@@ -66,8 +66,8 @@ export default function TransactionsPage() {
   useEffect(() => {
     fetchTransactions()
     fetchCategories()
-    // Buscar lista de usuários se for ADMIN ou OWNER
-    if (userRole === 'ADMIN' || userRole === 'OWNER') {
+    // Buscar lista de usuários se for OWNER
+    if (userRole === 'OWNER') {
       fetchUsers()
     }
   }, [filter, userRole])
@@ -230,7 +230,7 @@ export default function TransactionsPage() {
                 ))}
             </select>
           </div>
-          {(userRole === 'ADMIN' || userRole === 'OWNER') && (
+          {(userRole === 'OWNER') && (
             <div>
               <label className="block text-xs font-medium mb-1">Membro</label>
               <select
@@ -294,7 +294,7 @@ export default function TransactionsPage() {
           </thead>
           <tbody className="dark:bg-gray-900 dark:text-gray-100">
             {transactions.map(tx => {
-              const canEdit = userRole === 'ADMIN' || userRole === 'OWNER' || (userRole === 'USER' && tx.user?.id === currentUserId)
+              const canEdit = userRole === 'OWNER' || (userRole === 'USER' && tx.user?.id === currentUserId)
               return (
                 <tr key={tx.id} className="border-b dark:border-gray-700">
                   <td className="p-2">{new Date(tx.date).toLocaleDateString()}</td>

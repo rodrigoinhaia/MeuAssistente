@@ -10,54 +10,51 @@ export async function GET(request: NextRequest) {
       return Response.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    // Verifica se o usuário é OWNER ou ADMIN
-    const user = await prisma.user.findUnique({
-      where: {
-        email_familyId: {
-          email: session.user.email!,
-          familyId: session.user.familyId!
+    const userRole = (session.user as any)?.role
+    const userFamilyId = (session.user as any)?.familyId
+
+    // SUPER_ADMIN pode ver todas as assinaturas, outros roles só da sua família
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'OWNER') {
+      return Response.json({ error: 'Não autorizado' }, { status: 403 })
+    }
+
+    // Busca assinaturas usando Prisma (seguro contra SQL injection)
+    const whereClause = userRole === 'SUPER_ADMIN' ? {} : { familyId: userFamilyId }
+    
+    const subscriptions = await prisma.subscription.findMany({
+      where: whereClause,
+      include: {
+        family: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+          }
         }
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
     })
 
-    if (!user || (user.role !== 'OWNER' && user.role !== 'ADMIN')) {
-      return Response.json({ error: 'Não autorizado' }, { status: 401 })
-    }
-
-    // Busca todas as assinaturas com informações do family e plano
-    const subscriptions = await prisma.$queryRaw<Array<{
-      id: string
-      familyId: string
-      familyName: string
-      planId: string
-      planName: string
-      status: string
-      startDate: Date
-      endDate: Date | null
-      price: number
-      asaasSubscriptionId?: string | null
-    }>>`
-      SELECT
-        s.id,
-        s.family_id as "familyId",
-        f.name as "familyName",
-        s.plan_id as "planId",
-        p.name as "planName",
-        s.status,
-        s.start_date as "startDate",
-        s.end_date as "endDate",
-        p.price::numeric as price
-      FROM subscriptions s
-      JOIN families f ON f.id = s.family_id
-      JOIN plans p ON p.id = s.plan_id
-    `
-
     // Formata os dados para o frontend
     const formattedSubscriptions = subscriptions.map(sub => ({
-      ...sub,
-      startDate: new Date(sub.startDate).toISOString(),
-      endDate: sub.endDate ? new Date(sub.endDate).toISOString() : null,
+      id: sub.id,
+      familyId: sub.familyId,
+      familyName: sub.family.name,
+      planId: sub.planId,
+      planName: sub.plan.name,
+      status: sub.status,
+      startDate: sub.startDate.toISOString(),
+      endDate: sub.endDate ? sub.endDate.toISOString() : null,
       price: Number(sub.price),
+      asaasSubscriptionId: sub.asaasSubscriptionId,
     }))
 
     return Response.json({ subscriptions: formattedSubscriptions })
@@ -74,64 +71,65 @@ export async function PATCH(request: NextRequest) {
       return Response.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    // Verifica se o usuário é OWNER ou ADMIN
-    const user = await prisma.user.findUnique({
-      where: {
-        email_familyId: {
-          email: session.user.email!,
-          familyId: session.user.familyId!
-        }
-      }
-    })
+    const userRole = (session.user as any)?.role
+    const userFamilyId = (session.user as any)?.familyId
 
-    if (!user || (user.role !== 'OWNER' && user.role !== 'ADMIN')) {
-      return Response.json({ error: 'Não autorizado' }, { status: 401 })
+    // SUPER_ADMIN pode editar qualquer assinatura, outros roles só da sua família
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'OWNER') {
+      return Response.json({ error: 'Não autorizado' }, { status: 403 })
     }
 
     const data = await request.json()
     const { id, status } = data
 
-    // Atualiza o status da assinatura
-    // Atualiza o status e retorna os dados atualizados
-    const [subscription] = await prisma.$queryRaw<Array<{
-      id: string
-      familyId: string
-      familyName: string
-      planId: string
-      planName: string
-      status: string
-      startDate: Date
-      endDate: Date | null
-      price: number
-      asaasSubscriptionId?: string | null
-    }>>`
-      UPDATE subscriptions s
-      SET status = ${status}
-      WHERE s.id = ${id}
-      RETURNING
-        s.id,
-        s.family_id as "familyId",
-        f.name as "familyName",
-        s.plan_id as "planId",
-        p.name as "planName",
-        s.status,
-        s.start_date as "startDate",
-        s.end_date as "endDate",
-        p.price::numeric as price
-      FROM families f, plans p
-      WHERE f.id = s.family_id AND p.id = s.plan_id
-    `
+    // Verificar se a assinatura existe e se o usuário tem permissão
+    const subscriptionToUpdate = await prisma.subscription.findUnique({
+      where: { id },
+      include: { family: true }
+    })
 
-    if (!subscription) {
+    if (!subscriptionToUpdate) {
       return Response.json({ error: 'Assinatura não encontrada' }, { status: 404 })
     }
 
+    // SUPER_ADMIN pode editar qualquer assinatura, outros roles só da sua família
+    if (userRole !== 'SUPER_ADMIN' && subscriptionToUpdate.familyId !== userFamilyId) {
+      return Response.json({ error: 'Não autorizado para editar esta assinatura' }, { status: 403 })
+    }
+
+    // Atualiza o status da assinatura usando Prisma
+    const updatedSubscription = await prisma.subscription.update({
+      where: { id },
+      data: { status },
+      include: {
+        family: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+          }
+        }
+      }
+    })
+
     // Formata a resposta
     const formattedSubscription = {
-      ...subscription,
-      startDate: new Date(subscription.startDate).toISOString(),
-      endDate: subscription.endDate ? new Date(subscription.endDate).toISOString() : null,
-      price: Number(subscription.price),
+      id: updatedSubscription.id,
+      familyId: updatedSubscription.familyId,
+      familyName: updatedSubscription.family.name,
+      planId: updatedSubscription.planId,
+      planName: updatedSubscription.plan.name,
+      status: updatedSubscription.status,
+      startDate: updatedSubscription.startDate.toISOString(),
+      endDate: updatedSubscription.endDate ? updatedSubscription.endDate.toISOString() : null,
+      price: Number(updatedSubscription.price),
+      asaasSubscriptionId: updatedSubscription.asaasSubscriptionId,
     }
 
     return Response.json({ subscription: formattedSubscription })

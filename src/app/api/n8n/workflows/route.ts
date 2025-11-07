@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/authorization'
 import { prisma } from '@/lib/db'
 
 export async function GET(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'ADMIN', 'SUPER_ADMIN'])
+  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
@@ -112,7 +112,7 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'ADMIN', 'SUPER_ADMIN'])
+  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }

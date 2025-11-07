@@ -35,7 +35,7 @@ export async function PUT(
       return NextResponse.json({ status: 'error', message: 'Você só pode editar suas próprias transações' }, { status: 403 })
     }
 
-    // ADMIN e OWNER podem editar qualquer transação da família
+    // OWNER pode editar qualquer transação da família
     const { description, amount, date, dueDate, type, status, categoryId } = await req.json()
 
     const updatedTransaction = await prisma.transaction.update({
@@ -98,7 +98,7 @@ export async function DELETE(
       return NextResponse.json({ status: 'error', message: 'Você só pode excluir suas próprias transações' }, { status: 403 })
     }
 
-    // ADMIN e OWNER podem excluir qualquer transação da família
+    // OWNER pode excluir qualquer transação da família
     await prisma.transaction.delete({
       where: { id },
     })
