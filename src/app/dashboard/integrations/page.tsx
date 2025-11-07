@@ -74,6 +74,14 @@ export default function IntegrationsPage() {
   const [institutions, setInstitutions] = useState<any[]>([])
   const [syncingBank, setSyncingBank] = useState<string | null>(null)
   const [categorizing, setCategorizing] = useState(false)
+  const [showEvolutionModal, setShowEvolutionModal] = useState(false)
+  const [evolutionForm, setEvolutionForm] = useState({
+    apiUrl: '',
+    apiKey: '',
+    instanceName: '',
+  })
+  const [evolutionStatus, setEvolutionStatus] = useState<any>(null)
+  const [checkingEvolutionStatus, setCheckingEvolutionStatus] = useState(false)
 
   useEffect(() => {
     if (status === 'authenticated') {
