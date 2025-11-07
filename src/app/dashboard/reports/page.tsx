@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useAdminContext } from '@/hooks/useAdminContext'
+import apiClient from '@/lib/axios-config'
 
 interface ReportData {
   totalRevenue: number
@@ -19,21 +21,26 @@ interface MonthlyRevenue {
 
 export default function ReportsPage() {
   const { data: session, status } = useSession()
+  const { isAdminMode } = useAdminContext()
+  const userRole = (session?.user as any)?.role
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenue[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchReportData()
-  }, [])
+    // OWNER ou SUPER_ADMIN em modo admin podem ver relatórios
+    if (status === 'authenticated' && (userRole === 'OWNER' || (userRole === 'SUPER_ADMIN' && isAdminMode))) {
+      fetchReportData()
+    }
+  }, [status, session, userRole, isAdminMode])
 
   async function fetchReportData() {
     setLoading(true)
     setError('')
     try {
-      const response = await fetch('/api/reports')
-      const data = await response.json()
+      const response = await apiClient.get('/reports')
+      const data = response.data
 
       if (data.status === 'ok') {
         setReportData(data.reportData)
@@ -42,14 +49,31 @@ export default function ReportsPage() {
         setError(data.message || 'Erro ao carregar relatórios')
       }
     } catch (err: any) {
-      setError('Erro ao carregar relatórios')
+      setError(err.response?.data?.message || 'Erro ao carregar relatórios')
       console.error('Erro ao buscar relatórios:', err)
     }
     setLoading(false)
   }
 
-  if (status === 'loading') return <div>Carregando sessão...</div>
-  if (!session || !session.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) return <div>Acesso restrito.</div>
+  if (status === 'loading') {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
+      </div>
+    )
+  }
+  
+  // OWNER ou SUPER_ADMIN em modo admin podem ver relatórios
+  if (!session || !session.user || (userRole !== 'OWNER' && (userRole !== 'SUPER_ADMIN' || !isAdminMode))) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700 shadow-sm">
+          <p className="font-semibold">Acesso restrito.</p>
+          <p className="text-sm mt-1">Apenas Owners ou Super Admins no modo Admin podem ver relatórios.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) return <div>Carregando relatórios...</div>
   if (error) return <div className="text-red-600">{error}</div>

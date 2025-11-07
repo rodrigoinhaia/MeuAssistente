@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useAdminContext } from '@/hooks/useAdminContext'
+import apiClient from '@/lib/axios-config'
 
 interface Plan {
   id: string
@@ -39,15 +41,14 @@ export default function PlansPage() {
 
   async function fetchPlans() {
     try {
-      const res = await fetch('/api/plans')
-      const data = await res.json()
-      if (data.error) {
-        setError(data.error)
+      const res = await apiClient.get('/plans')
+      if (res.data.error) {
+        setError(res.data.error)
       } else {
-        setPlans(data.plans)
+        setPlans(res.data.plans || [])
       }
-    } catch (err) {
-      setError('Erro ao carregar planos')
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao carregar planos')
     } finally {
       setLoading(false)
     }
@@ -61,10 +62,17 @@ export default function PlansPage() {
     )
   }
 
-  if (!session || !session.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) {
+  const userRole = (session?.user as any)?.role
+  const { isAdminMode } = useAdminContext()
+  
+  // Apenas SUPER_ADMIN em modo admin pode gerenciar planos
+  if (!session || !session.user || userRole !== 'SUPER_ADMIN' || !isAdminMode) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
-        Acesso restrito.
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200/60 text-center">
+          <p className="text-xl font-semibold text-slate-800">Acesso restrito.</p>
+          <p className="text-sm text-slate-600 mt-2">Apenas Super Admins no modo Admin podem gerenciar planos.</p>
+        </div>
       </div>
     )
   }
@@ -102,26 +110,21 @@ export default function PlansPage() {
     }
     
     try {
-      const method = editPlan.id ? 'PATCH' : 'POST'
-      const res = await fetch('/api/plans', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editPlan,
-          features: editPlan.features.filter(f => f.trim())
-        })
+      const method = editPlan.id ? 'patch' : 'post'
+      const res = await apiClient[method]('/plans', {
+        ...editPlan,
+        features: editPlan.features.filter(f => f.trim())
       })
       
-      const data = await res.json()
-      if (data.error) {
-        setError(data.error)
+      if (res.data.error) {
+        setError(res.data.error)
       } else {
         setSuccess(editPlan.id ? 'Plano atualizado com sucesso!' : 'Plano criado com sucesso!')
         setEditPlan(null)
         fetchPlans()
       }
     } catch (err: any) {
-      setError(editPlan.id ? 'Erro ao atualizar plano' : 'Erro ao criar plano')
+      setError(err.response?.data?.error || (editPlan.id ? 'Erro ao atualizar plano' : 'Erro ao criar plano'))
     }
   }
 
@@ -132,24 +135,19 @@ export default function PlansPage() {
     if (!confirmed) return
     
     try {
-      const res = await fetch('/api/plans', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...plan,
-          isActive: !plan.isActive
-        })
+      const res = await apiClient.patch('/plans', {
+        ...plan,
+        isActive: !plan.isActive
       })
       
-      const data = await res.json()
-      if (data.error) {
-        setError(data.error)
+      if (res.data.error) {
+        setError(res.data.error)
       } else {
         setSuccess(`Plano ${action === 'ativar' ? 'ativado' : 'desativado'} com sucesso!`)
         fetchPlans()
       }
     } catch (err: any) {
-      setError(`Erro ao ${action} o plano`)
+      setError(err.response?.data?.error || `Erro ao ${action} o plano`)
     }
   }
 

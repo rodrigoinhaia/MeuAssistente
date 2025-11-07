@@ -38,7 +38,7 @@ const familyMenuItems = [
 // Definição dos itens do menu - Modo Super Admin
 const adminMenuItems = [
   { href: '/dashboard', icon: RiDashboardLine, label: 'Dashboard Admin' },
-  { href: '/dashboard/clients', icon: RiTeamLine, label: 'Famílias' },
+  { href: '/dashboard/tenants', icon: RiTeamLine, label: 'Famílias' },
   { href: '/dashboard/plans', icon: RiPriceTag3Line, label: 'Planos' },
   { href: '/dashboard/subscriptions', icon: RiFileListLine, label: 'Assinaturas' },
   { href: '/dashboard/payments', icon: RiMoneyDollarBoxLine, label: 'Pagamentos' },

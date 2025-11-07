@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
-import { authOptions } from '../auth/[...nextauth]/authOptions'
+import { requireAuth } from '@/lib/authorization'
 
 // GET /api/payments - Lista todos os pagamentos
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    console.log('Session:', session)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    const contextHeader = request.headers.get('x-admin-context')
+    const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+    
+    const authResult = await requireAuth(request, ['SUPER_ADMIN', 'OWNER'], adminContext)
+    
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status })
     }
-
-    // Apenas OWNER e ADMIN podem ver pagamentos
-    if ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
-    }
+    
+    const { role, familyId, adminContext: context } = authResult
+    
+    // SUPER_ADMIN em modo admin vê todos os pagamentos
+    // SUPER_ADMIN em modo família e OWNER vê apenas pagamentos da sua família
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
+      ? {} 
+      : { familyId }
 
     const payments = await prisma.payment.findMany({
+      where: whereClause,
       include: {
         family: {
           select: {
@@ -45,15 +51,16 @@ export async function GET(request: NextRequest) {
 // PATCH /api/payments/:id - Atualiza o status de um pagamento
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    const contextHeader = request.headers.get('x-admin-context')
+    const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+    
+    const authResult = await requireAuth(request, ['SUPER_ADMIN', 'OWNER'], adminContext)
+    
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status })
     }
-
-    // Apenas OWNER e ADMIN podem atualizar pagamentos
-    if ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
-    }
+    
+    const { role, familyId, adminContext: context } = authResult
 
     const body = await request.json()
     const { id, status } = body
@@ -73,7 +80,25 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const payment = await prisma.payment.update({
+    // Verificar se o pagamento existe e se o usuário tem permissão
+    const payment = await prisma.payment.findUnique({
+      where: { id },
+      include: { family: true }
+    })
+
+    if (!payment) {
+      return NextResponse.json({ error: 'Pagamento não encontrado' }, { status: 404 })
+    }
+
+    // SUPER_ADMIN em modo admin pode editar qualquer pagamento
+    // SUPER_ADMIN em modo família e OWNER só da sua família
+    if (role === 'SUPER_ADMIN' && context === 'admin') {
+      // Pode editar qualquer
+    } else if (payment.familyId !== familyId) {
+      return NextResponse.json({ error: 'Não autorizado para editar este pagamento' }, { status: 403 })
+    }
+
+    const updatedPayment = await prisma.payment.update({
       where: { id },
       data: {
         status,
@@ -81,7 +106,7 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(payment)
+    return NextResponse.json(updatedPayment)
   } catch (error) {
     console.error('Erro ao atualizar pagamento:', error)
     return NextResponse.json(

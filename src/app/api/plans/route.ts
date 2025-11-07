@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '../auth/[...nextauth]/authOptions'
+import { requireAuth } from '@/lib/authorization'
 
 // GET /api/plans - Lista todos os planos
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const contextHeader = req.headers.get('x-admin-context')
+    const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+    
+    const authResult = await requireAuth(req, ['SUPER_ADMIN', 'OWNER'], adminContext)
+    
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status })
+    }
+    
+    const { role, adminContext: context } = authResult
+    
+    // Apenas SUPER_ADMIN em modo admin ou OWNER pode ver planos
+    // OWNER vê planos para escolher, SUPER_ADMIN em modo admin gerencia planos
+    if (role === 'SUPER_ADMIN' && context !== 'admin') {
+      return NextResponse.json({ error: 'Acesso apenas no modo Admin' }, { status: 403 })
     }
 
     const plans = await prisma.plan.findMany({
@@ -25,9 +36,21 @@ export async function GET() {
 // POST /api/plans - Cria um novo plano
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const contextHeader = req.headers.get('x-admin-context')
+    const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+    
+    const { requireAuth } = await import('@/lib/authorization')
+    const authResult = await requireAuth(req, ['SUPER_ADMIN'], adminContext)
+    
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status })
+    }
+    
+    const { role, adminContext: context } = authResult
+    
+    // Apenas SUPER_ADMIN em modo admin pode criar planos
+    if (role !== 'SUPER_ADMIN' || context !== 'admin') {
+      return NextResponse.json({ error: 'Apenas Super Admin em modo Admin pode criar planos' }, { status: 403 })
     }
 
     const data = await req.json()
@@ -52,9 +75,21 @@ export async function POST(req: Request) {
 // PATCH /api/plans - Atualiza um plano existente
 export async function PATCH(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const contextHeader = req.headers.get('x-admin-context')
+    const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+    
+    const { requireAuth } = await import('@/lib/authorization')
+    const authResult = await requireAuth(req, ['SUPER_ADMIN'], adminContext)
+    
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status })
+    }
+    
+    const { role, adminContext: context } = authResult
+    
+    // Apenas SUPER_ADMIN em modo admin pode atualizar planos
+    if (role !== 'SUPER_ADMIN' || context !== 'admin') {
+      return NextResponse.json({ error: 'Apenas Super Admin em modo Admin pode atualizar planos' }, { status: 403 })
     }
 
     const data = await req.json()
