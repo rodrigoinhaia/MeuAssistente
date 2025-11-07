@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useAdminContext } from '@/hooks/useAdminContext'
+import apiClient from '@/lib/axios-config'
 
 interface Plan {
   id: string
@@ -58,15 +60,17 @@ const statusLabels: Record<string, string> = {
 }
 
 const statusColors: Record<string, string> = {
-  active: 'text-emerald-600 dark:text-emerald-400',
-  inactive: 'text-gray-600 dark:text-gray-400',
-  cancelled: 'text-red-600 dark:text-red-400',
-  trial: 'text-blue-600 dark:text-blue-400',
-  expired: 'text-orange-600 dark:text-orange-400',
+  active: 'text-emerald-600',
+  inactive: 'text-slate-600',
+  cancelled: 'text-red-600',
+  trial: 'text-blue-600',
+  expired: 'text-orange-600',
 }
 
 export default function SubscriptionsPage() {
   const { data: session, status } = useSession()
+  const { isAdminMode } = useAdminContext()
+  const userRole = (session?.user as any)?.role
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -77,23 +81,28 @@ export default function SubscriptionsPage() {
   const [editSubscription, setEditSubscription] = useState<EditingSubscription | null>(null)
 
   useEffect(() => {
-    fetchSubscriptions()
-    fetchPlans()
-    fetchFamilies()
-  }, [])
+    // OWNER ou SUPER_ADMIN em modo admin podem ver assinaturas
+    if (status === 'authenticated' && (userRole === 'OWNER' || (userRole === 'SUPER_ADMIN' && isAdminMode))) {
+      fetchSubscriptions()
+      fetchPlans()
+      if (userRole === 'SUPER_ADMIN' && isAdminMode) {
+        fetchFamilies()
+      }
+    }
+  }, [status, session, userRole, isAdminMode])
 
   async function fetchSubscriptions() {
     try {
-      const res = await fetch('/api/subscriptions')
-      const data = await res.json()
+      const res = await apiClient.get('/subscriptions')
+      const data = res.data
       
       if (data.error) {
         throw new Error(data.error)
       }
       
-      setSubscriptions(data.subscriptions)
+      setSubscriptions(data.subscriptions || [])
     } catch (err: any) {
-      setError('Erro ao carregar assinaturas')
+      setError(err.response?.data?.error || 'Erro ao carregar assinaturas')
     } finally {
       setLoading(false)
     }
@@ -101,31 +110,31 @@ export default function SubscriptionsPage() {
 
   async function fetchPlans() {
     try {
-      const res = await fetch('/api/plans')
-      const data = await res.json()
+      const res = await apiClient.get('/plans')
+      const data = res.data
       
       if (data.error) {
         throw new Error(data.error)
       }
       
-      setPlans(data.plans.filter((p: Plan) => p.isActive))
+      setPlans((data.plans || []).filter((p: Plan) => p.isActive))
     } catch (err: any) {
-      setError('Erro ao carregar planos')
+      setError(err.response?.data?.error || 'Erro ao carregar planos')
     }
   }
 
   async function fetchFamilies() {
     try {
-      const res = await fetch('/api/tenants')
-      const data = await res.json()
+      const res = await apiClient.get('/tenants')
+      const data = res.data
       
-      if (data.error) {
-        throw new Error(data.error)
+      if (data.status === 'ok') {
+        setFamilies(data.families || [])
+      } else {
+        throw new Error(data.message || 'Erro ao carregar famílias')
       }
-      
-      setFamilies(data.families)
     } catch (err: any) {
-      setError('Erro ao carregar empresas')
+      setError(err.response?.data?.message || 'Erro ao carregar famílias')
     }
   }
 
@@ -143,13 +152,9 @@ export default function SubscriptionsPage() {
     if (!confirmed) return
 
     try {
-      const res = await fetch('/api/subscriptions', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus })
-      })
+      const res = await apiClient.patch('/subscriptions', { id, status: newStatus })
+      const data = res.data
       
-      const data = await res.json()
       if (data.error) {
         throw new Error(data.error)
       }
@@ -157,7 +162,7 @@ export default function SubscriptionsPage() {
       setSuccess(`Assinatura ${statusMap[newStatus as keyof typeof statusMap]}da com sucesso!`)
       fetchSubscriptions()
     } catch (err: any) {
-      setError(err.message || 'Erro ao atualizar status')
+      setError(err.response?.data?.error || err.message || 'Erro ao atualizar status')
     }
   }
 
@@ -169,16 +174,9 @@ export default function SubscriptionsPage() {
     if (!editSubscription) return
 
     try {
-      const url = '/api/subscriptions'
-      const method = editSubscription.id ? 'PUT' : 'POST'
-      
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editSubscription)
-      })
-
-      const data = await res.json()
+      const method = editSubscription.id ? 'put' : 'post'
+      const res = await apiClient[method]('/subscriptions', editSubscription)
+      const data = res.data
       
       if (data.error) {
         throw new Error(data.error)
@@ -188,22 +186,26 @@ export default function SubscriptionsPage() {
       setEditSubscription(null)
       fetchSubscriptions()
     } catch (err: any) {
-      setError(err.message || 'Erro ao salvar assinatura')
+      setError(err.response?.data?.error || err.message || 'Erro ao salvar assinatura')
     }
   }
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
       </div>
     )
   }
 
-  if (!session || !session.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) {
+  // OWNER ou SUPER_ADMIN em modo admin podem ver assinaturas
+  if (!session || !session.user || (userRole !== 'OWNER' && (userRole !== 'SUPER_ADMIN' || !isAdminMode))) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-400 text-lg">Acesso restrito</div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200/60 text-center">
+          <p className="text-xl font-semibold text-slate-800">Acesso restrito.</p>
+          <p className="text-sm text-slate-600 mt-2">Apenas Owners ou Super Admins no modo Admin podem ver assinaturas.</p>
+        </div>
       </div>
     )
   }
@@ -211,30 +213,34 @@ export default function SubscriptionsPage() {
   return (
     <main className="p-4 md:p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-          Gestão de Assinaturas
-        </h1>
-        <button
-          onClick={() => setEditSubscription({})}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white hover:from-cyan-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-cyan-500/20 transition-all"
-        >
-          Nova Assinatura
-        </button>
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
+            Gestão de Assinaturas
+          </h1>
+          <p className="text-slate-600 mt-1">Gerencie assinaturas e planos das famílias</p>
+        </div>
+        {(userRole === 'SUPER_ADMIN' && isAdminMode) && (
+          <button
+            onClick={() => setEditSubscription({})}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium"
+          >
+            Nova Assinatura
+          </button>
+        )}
       </div>
       
       <div className="mb-6 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
         <input
-          className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-cyan-400 transition-colors"
+          className="bg-white border border-slate-200/60 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all shadow-sm"
           placeholder="Buscar por empresa ou plano"
           value={filter}
           onChange={e => setFilter(e.target.value)}
         />
         <select
-          className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-cyan-400 transition-colors [&>*]:bg-gray-900"
+          className="bg-white border border-slate-200/60 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all shadow-sm"
           value={filter}
           onChange={e => setFilter(e.target.value)}
           title="Filtrar por status"
-          style={{ backgroundColor: '#111827' }}
         >
           <option value="">Todos os status</option>
           <option value="active">Ativa</option>
@@ -244,25 +250,33 @@ export default function SubscriptionsPage() {
         </select>
       </div>
 
-      {error && <div className="text-red-400 mb-4">{error}</div>}
-      {success && <div className="text-emerald-400 mb-4">{success}</div>}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 shadow-sm">
+          {success}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
         </div>
       ) : (
-        <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-2xl overflow-hidden">
+        <div className="bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-md">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 text-gray-400">
-                <th className="p-4 text-left">Empresa</th>
-                <th className="p-4 text-left">Plano</th>
-                <th className="p-4 text-left">Status</th>
-                <th className="p-4 text-left">Início</th>
-                <th className="p-4 text-left">Fim</th>
-                <th className="p-4 text-left">Valor</th>
-                <th className="p-4 text-left">Ações</th>
+              <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+                <th className="p-4 text-left font-semibold text-slate-700">Família</th>
+                <th className="p-4 text-left font-semibold text-slate-700">Plano</th>
+                <th className="p-4 text-left font-semibold text-slate-700">Status</th>
+                <th className="p-4 text-left font-semibold text-slate-700">Início</th>
+                <th className="p-4 text-left font-semibold text-slate-700">Fim</th>
+                <th className="p-4 text-left font-semibold text-slate-700">Valor</th>
+                <th className="p-4 text-left font-semibold text-slate-700">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -275,58 +289,58 @@ export default function SubscriptionsPage() {
                 .map(subscription => (
                   <tr 
                     key={subscription.id} 
-                    className="border-b border-gray-800/50 text-gray-300 hover:bg-white/5 transition-colors"
+                    className="border-b border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
                   >
                     <td className="p-4">
-                      <div className="font-semibold text-white">{subscription.familyName}</div>
+                      <div className="font-semibold text-slate-800">{subscription.familyName}</div>
                       {subscription.asaasSubscriptionId && (
-                        <div className="text-xs text-gray-500">ID Asaas: {subscription.asaasSubscriptionId}</div>
+                        <div className="text-xs text-slate-500">ID Asaas: {subscription.asaasSubscriptionId}</div>
                       )}
                     </td>
-                    <td className="p-4">{subscription.planName}</td>
+                    <td className="p-4 text-slate-600">{subscription.planName}</td>
                     <td className="p-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                         subscription.status === 'active'
-                          ? 'bg-emerald-400/10 text-emerald-400'
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                           : subscription.status === 'trial'
-                          ? 'bg-blue-400/10 text-blue-400'
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
                           : subscription.status === 'cancelled'
-                          ? 'bg-red-400/10 text-red-400'
+                          ? 'bg-red-100 text-red-700 border border-red-200'
                           : subscription.status === 'expired'
-                          ? 'bg-orange-400/10 text-orange-400'
-                          : 'bg-gray-400/10 text-gray-400'
+                          ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
                       }`}>
                         {statusLabels[subscription.status]}
                       </span>
                     </td>
-                    <td className="p-4">
-                      <div>{new Date(subscription.startDate).toLocaleDateString()}</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(subscription.startDate).toLocaleTimeString()}
+                    <td className="p-4 text-slate-600">
+                      <div>{new Date(subscription.startDate).toLocaleDateString('pt-BR')}</div>
+                      <div className="text-xs text-slate-500">
+                        {new Date(subscription.startDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 text-slate-600">
                       {subscription.endDate ? (
                         <>
-                          <div>{new Date(subscription.endDate).toLocaleDateString()}</div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(subscription.endDate).toLocaleTimeString()}
+                          <div>{new Date(subscription.endDate).toLocaleDateString('pt-BR')}</div>
+                          <div className="text-xs text-slate-500">
+                            {new Date(subscription.endDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </>
                       ) : (
-                        '-'
+                        <span className="text-slate-400">-</span>
                       )}
                     </td>
                     <td className="p-4">
-                      <div className="font-medium">R$ {Number(subscription.price).toFixed(2)}</div>
-                      <div className="text-xs text-gray-500">/mês</div>
+                      <div className="font-semibold text-slate-800">R$ {Number(subscription.price).toFixed(2)}</div>
+                      <div className="text-xs text-slate-500">/mês</div>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         {subscription.status !== 'active' && (
                           <button
                             onClick={() => handleStatusChange(subscription.id, 'active')}
-                            className="p-2 rounded-lg bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20 transition-colors"
+                            className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-transparent hover:border-emerald-200 transition-colors"
                             title="Ativar assinatura"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -337,7 +351,7 @@ export default function SubscriptionsPage() {
                         {subscription.status !== 'cancelled' && (
                           <button
                             onClick={() => handleStatusChange(subscription.id, 'cancelled')}
-                            className="p-2 rounded-lg bg-red-400/10 text-red-400 hover:bg-red-400/20 transition-colors"
+                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-transparent hover:border-red-200 transition-colors"
                             title="Cancelar assinatura"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -347,11 +361,11 @@ export default function SubscriptionsPage() {
                         )}
                         <button
                           onClick={() => setEditSubscription(subscription)}
-                          className="p-2 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+                          className="p-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors"
                           title="Editar assinatura"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
                       </div>
@@ -365,43 +379,44 @@ export default function SubscriptionsPage() {
 
       {/* Modal de edição */}
       {editSubscription !== null && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form
             onSubmit={handleSubmit}
-            className="bg-gray-900/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md border border-gray-800 space-y-6"
+            className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60 space-y-6"
           >
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
               {editSubscription.id ? 'Editar Assinatura' : 'Nova Assinatura'}
             </h2>
             
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Empresa</label>
-                <select
-                  value={editSubscription.familyId || ''}
-                  onChange={e => {
-                    const family = families.find(t => t.id === e.target.value)
-                    setEditSubscription({
-                      ...editSubscription,
-                      familyId: e.target.value,
-                      familyName: family?.name
-                    })
-                  }}
-                  className="w-full bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all [&>*]:bg-gray-900"
-                  style={{ backgroundColor: '#111827' }}
-                  required
-                >
-                  <option value="" className="text-gray-400">Selecione uma empresa</option>
-                  {families.map(family => (
-                    <option key={family.id} value={family.id}>
-                      {family.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {(userRole === 'SUPER_ADMIN' && isAdminMode) && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Família</label>
+                  <select
+                    value={editSubscription.familyId || ''}
+                    onChange={e => {
+                      const family = families.find(t => t.id === e.target.value)
+                      setEditSubscription({
+                        ...editSubscription,
+                        familyId: e.target.value,
+                        familyName: family?.name
+                      })
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                    required
+                  >
+                    <option value="" className="text-slate-400">Selecione uma família</option>
+                    {families.map(family => (
+                      <option key={family.id} value={family.id}>
+                        {family.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Plano</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Plano</label>
                 <select
                   value={editSubscription.planId || ''}
                   onChange={e => {
@@ -413,11 +428,10 @@ export default function SubscriptionsPage() {
                       price: plan?.price
                     })
                   }}
-                  className="w-full bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all [&>*]:bg-gray-900"
-                  style={{ backgroundColor: '#111827' }}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                   required
                 >
-                  <option value="" className="text-gray-400">Selecione um plano</option>
+                  <option value="" className="text-slate-400">Selecione um plano</option>
                   {plans.map(plan => (
                     <option key={plan.id} value={plan.id}>
                       {plan.name} - R$ {Number(plan.price).toFixed(2)}/mês
@@ -427,12 +441,11 @@ export default function SubscriptionsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Status</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Status</label>
                 <select
                   value={editSubscription.status || 'active'}
                   onChange={e => setEditSubscription({ ...editSubscription, status: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all [&>*]:bg-gray-900"
-                  style={{ backgroundColor: '#111827' }}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                   required
                 >
                   <option value="active">Ativa</option>
@@ -444,37 +457,37 @@ export default function SubscriptionsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Data de Início</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Data de Início</label>
                 <input
                   type="datetime-local"
                   value={editSubscription.startDate || new Date().toISOString().slice(0, 16)}
                   onChange={e => setEditSubscription({ ...editSubscription, startDate: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Data de Término</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Data de Término</label>
                 <input
                   type="datetime-local"
                   value={editSubscription.endDate || ''}
                   onChange={e => setEditSubscription({ ...editSubscription, endDate: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                 />
-                <p className="mt-1 text-xs text-gray-500">Opcional. Deixe em branco para assinaturas sem data de término.</p>
+                <p className="mt-1 text-xs text-slate-500">Opcional. Deixe em branco para assinaturas sem data de término.</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">ID Asaas</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">ID Asaas</label>
                 <input
                   type="text"
                   value={editSubscription.asaasSubscriptionId || ''}
                   onChange={e => setEditSubscription({ ...editSubscription, asaasSubscriptionId: e.target.value })}
                   placeholder="ID da assinatura no Asaas"
-                  className="w-full bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                 />
-                <p className="mt-1 text-xs text-gray-500">Opcional. ID da assinatura no Asaas para integração.</p>
+                <p className="mt-1 text-xs text-slate-500">Opcional. ID da assinatura no Asaas para integração.</p>
               </div>
             </div>
 
@@ -482,25 +495,25 @@ export default function SubscriptionsPage() {
               <button
                 type="button"
                 onClick={() => setEditSubscription(null)}
-                className="px-4 py-2 rounded-lg border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 hover:bg-white/5 transition-all"
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white hover:from-cyan-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-cyan-500/20 transition-all"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium"
               >
                 {editSubscription.id ? 'Salvar alterações' : 'Criar assinatura'}
               </button>
             </div>
 
             {error && (
-              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                 {error}
               </div>
             )}
             {success && (
-              <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm">
+              <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm">
                 {success}
               </div>
             )}

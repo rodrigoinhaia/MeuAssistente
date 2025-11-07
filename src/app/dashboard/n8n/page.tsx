@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useAdminContext } from '@/hooks/useAdminContext'
+import apiClient from '@/lib/axios-config'
 
 interface Workflow {
   id: string
@@ -48,6 +50,8 @@ const executionStatusLabels = {
 
 export default function N8NPage() {
   const { data: session, status } = useSession()
+  const { isAdminMode } = useAdminContext()
+  const userRole = (session?.user as any)?.role
   const [workflows, setWorkflows] = useState<Workflow[]>([])
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,15 +59,18 @@ export default function N8NPage() {
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    fetchN8NData()
-  }, [])
+    // OWNER ou SUPER_ADMIN em modo admin podem ver N8N
+    if (status === 'authenticated' && (userRole === 'OWNER' || (userRole === 'SUPER_ADMIN' && isAdminMode))) {
+      fetchN8NData()
+    }
+  }, [status, session, userRole, isAdminMode])
 
   async function fetchN8NData() {
     setLoading(true)
     setError('')
     try {
-      const response = await fetch('/api/n8n/workflows')
-      const data = await response.json()
+      const response = await apiClient.get('/n8n/workflows')
+      const data = response.data
 
       if (data.status === 'ok') {
         setWorkflows(data.workflows || [])
@@ -72,7 +79,7 @@ export default function N8NPage() {
         setError(data.message || 'Erro ao carregar dados do N8N')
       }
     } catch (err: any) {
-      setError('Erro ao carregar dados do N8N')
+      setError(err.response?.data?.message || 'Erro ao carregar dados do N8N')
       console.error('Erro ao buscar dados do N8N:', err)
     }
     setLoading(false)
@@ -87,20 +94,12 @@ export default function N8NPage() {
 
       const newStatus = workflow.status === 'active' ? 'inactive' : 'active'
       
-      // Precisamos usar o workflowId (não o id do Prisma)
-      // O workflowId é o campo único que identifica o workflow no N8N
-      const response = await fetch('/api/n8n/workflows', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          workflowId: workflow.id, // Usar o id do Prisma (que será mapeado para workflowId na API)
-          status: newStatus,
-        }),
+      const response = await apiClient.patch('/n8n/workflows', {
+        workflowId: workflow.id,
+        status: newStatus,
       })
 
-      const data = await response.json()
+      const data = response.data
 
       if (data.status === 'ok') {
         setSuccess('Status do workflow atualizado!')
@@ -109,13 +108,30 @@ export default function N8NPage() {
         setError(data.message || 'Erro ao atualizar status do workflow')
       }
     } catch (err: any) {
-      setError('Erro ao atualizar status do workflow')
+      setError(err.response?.data?.message || 'Erro ao atualizar status do workflow')
       console.error('Erro ao atualizar workflow:', err)
     }
   }
 
-  if (status === 'loading') return <div>Carregando sessão...</div>
-  if (!session || !session.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) return <div>Acesso restrito.</div>
+  if (status === 'loading') {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
+      </div>
+    )
+  }
+  
+  // OWNER ou SUPER_ADMIN em modo admin podem ver N8N
+  if (!session || !session.user || (userRole !== 'OWNER' && (userRole !== 'SUPER_ADMIN' || !isAdminMode))) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700 shadow-sm">
+          <p className="font-semibold">Acesso restrito.</p>
+          <p className="text-sm mt-1">Apenas Owners ou Super Admins no modo Admin podem ver monitoramento N8N.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">

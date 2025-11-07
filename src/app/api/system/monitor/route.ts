@@ -4,9 +4,21 @@ import { prisma } from '@/lib/db'
 import os from 'os'
 
 export async function GET(req: Request) {
-  const { session, role, error } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'])
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
+  }
+
+  // Apenas SUPER_ADMIN em modo admin ou OWNER pode ver monitoramento do sistema
+  // OWNER vê monitoramento da sua família, SUPER_ADMIN em modo admin vê sistema completo
+  if (role === 'SUPER_ADMIN' && context !== 'admin') {
+    return NextResponse.json(
+      { status: 'error', message: 'Acesso apenas no modo Admin' },
+      { status: 403 }
+    )
   }
 
   try {

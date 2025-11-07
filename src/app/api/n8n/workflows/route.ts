@@ -3,14 +3,18 @@ import { requireAuth } from '@/lib/authorization'
 import { prisma } from '@/lib/db'
 
 export async function GET(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'])
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
 
   try {
-    // Buscar workflows do N8N
-    const whereClause = role === 'SUPER_ADMIN' ? {} : { familyId }
+    // SUPER_ADMIN em modo admin vê todos os workflows
+    // SUPER_ADMIN em modo família e OWNER vê apenas workflows da sua família
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : { familyId }
 
     const workflows = await prisma.n8NWorkflow.findMany({
       where: whereClause,
@@ -112,7 +116,10 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'])
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
@@ -141,8 +148,11 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ status: 'error', message: 'Workflow não encontrado' }, { status: 404 })
     }
 
-    // Verificar se o usuário tem permissão (SUPER_ADMIN pode editar qualquer, outros só da própria família)
-    if (role !== 'SUPER_ADMIN' && workflow.familyId !== familyId) {
+    // SUPER_ADMIN em modo admin pode editar qualquer workflow
+    // SUPER_ADMIN em modo família e OWNER só da sua família
+    if (role === 'SUPER_ADMIN' && context === 'admin') {
+      // Pode editar qualquer
+    } else if (workflow.familyId !== familyId) {
       return NextResponse.json({ status: 'error', message: 'Não autorizado' }, { status: 403 })
     }
 
