@@ -293,7 +293,7 @@ export default function UsersPage() {
                     ? 'border-slate-200 hover:border-cyan-300' 
                     : 'border-slate-100 opacity-60'
                 } ${isCurrentUser ? 'ring-2 ring-cyan-500/20' : ''}`}
-              `>
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     {/* Avatar */}
