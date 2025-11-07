@@ -51,17 +51,9 @@ const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'ADM
 - ✅ Pode ver todos os dados da sua família
 - ✅ Pode gerenciar assinaturas da sua família
 - ✅ Pode ver relatórios da sua família
+- ✅ Pode ver/editar todas as transações da família
 - ❌ **NÃO** pode ver dados de outras famílias
 - ❌ **NÃO** pode gerenciar outras famílias
-
-### **ADMIN**
-- ✅ Pode ver todos os dados da sua família
-- ✅ Pode gerenciar usuários da sua família (exceto OWNER)
-- ✅ Pode criar/editar transações, categorias, etc. da sua família
-- ❌ **NÃO** pode ver dados de outras famílias
-- ❌ **NÃO** pode gerenciar outras famílias
-- ❌ **NÃO** pode ver todas as assinaturas (só da sua família)
-- ❌ **NÃO** pode acessar monitoramento do sistema
 
 ### **USER**
 - ✅ Pode ver apenas suas próprias transações
