@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/authorization'
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { session, role, familyId, error } = await requireAuth(req, [])
   if (error) {
@@ -12,7 +12,7 @@ export async function PUT(
   }
 
   try {
-    const { id } = params
+    const { id } = await params
     const { name, type, color, icon, isActive } = await req.json()
 
     // Verificar se a categoria existe e pertence à família
@@ -61,7 +61,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { session, role, familyId, error } = await requireAuth(req, [])
   if (error) {
@@ -69,7 +69,7 @@ export async function DELETE(
   }
 
   try {
-    const { id } = params
+    const { id } = await params
 
     // Verificar se a categoria existe e pertence à família
     const existingCategory = await prisma.category.findFirst({

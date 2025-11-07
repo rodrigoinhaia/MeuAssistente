@@ -50,29 +50,57 @@ export default function SettingsPage() {
     maintenanceMode: false,
     debugMode: false,
   })
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    // TODO: Carregar configurações do backend quando a API estiver pronta
-    // fetchSettings()
-  }, [])
+    if (status === 'authenticated') {
+      fetchSettings()
+    }
+  }, [status])
+
+  async function fetchSettings() {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await apiClient.get('/settings')
+      if (res.data.status === 'ok' && res.data.settings) {
+        setSettings(res.data.settings)
+      } else {
+        setError(res.data.message || 'Erro ao carregar configurações')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao carregar configurações')
+      console.error('Erro ao carregar configurações:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function handleSave() {
     setLoading(true)
     setError('')
     setSuccess('')
     try {
-      // TODO: Implementar API para salvar configurações
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simular API call
-      setSuccess('Configurações salvas com sucesso!')
-      setTimeout(() => setSuccess(''), 3000)
+      const res = await apiClient.put('/settings', settings)
+      if (res.data.status === 'ok') {
+        setSuccess('Configurações salvas com sucesso!')
+        // Atualizar settings com a resposta do servidor
+        if (res.data.settings) {
+          setSettings(res.data.settings)
+        }
+        setTimeout(() => setSuccess(''), 3000)
+      } else {
+        setError(res.data.message || 'Erro ao salvar configurações')
+        setTimeout(() => setError(''), 5000)
+      }
     } catch (err: any) {
-      setError('Erro ao salvar configurações')
+      setError(err.response?.data?.message || err.response?.data?.error || 'Erro ao salvar configurações')
       setTimeout(() => setError(''), 5000)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   if (status === 'loading') {

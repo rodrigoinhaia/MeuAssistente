@@ -1,8 +1,11 @@
 "use client"
 
 import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
+import apiClient from '@/lib/axios-config'
 
 export default function DashboardLayout({
   children,
@@ -71,6 +74,42 @@ export default function DashboardLayout({
             Fazer Login
           </a>
         </div>
+      </div>
+    )
+  }
+
+  // Verificar status do trial (apenas para OWNER, não para SUPER_ADMIN)
+  const [trialStatus, setTrialStatus] = useState<any>(null)
+  const [checkingTrial, setCheckingTrial] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (userRole === 'OWNER' && familyId) {
+      async function checkTrial() {
+        try {
+          const res = await apiClient.get(`/subscriptions/check-trial`)
+          setTrialStatus(res.data)
+          
+          // Se trial expirou e não está ativo, redirecionar para upgrade
+          if (res.data.trialExpired && !res.data.isActive) {
+            router.push('/dashboard/upgrade')
+          }
+        } catch (err) {
+          console.error('Erro ao verificar trial:', err)
+        } finally {
+          setCheckingTrial(false)
+        }
+      }
+      checkTrial()
+    } else {
+      setCheckingTrial(false)
+    }
+  }, [userRole, familyId, router])
+
+  if (checkingTrial) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
       </div>
     )
   }

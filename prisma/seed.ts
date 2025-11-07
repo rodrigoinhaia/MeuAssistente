@@ -72,6 +72,76 @@ async function main() {
   })
   console.log(`Created USER user: ${commonUser.email}`)
 
+  // 4. Criar Planos
+  await prisma.plan.deleteMany() // Limpa planos existentes
+
+  const basicPlan = await prisma.plan.create({
+    data: {
+      name: 'Básico',
+      description: 'Plano ideal para começar a organizar suas finanças familiares',
+      price: 19.90,
+      features: [
+        'Até 5 membros da família',
+        'Controle de receitas e despesas',
+        'Categorização automática',
+        'Relatórios básicos',
+        'Importação de extratos (OFX/CSV)',
+        'Suporte por email',
+        '3 dias grátis para testar',
+      ],
+      maxUsers: 5,
+      maxStorage: 1,
+      isActive: true,
+    },
+  })
+  console.log(`Created plan: ${basicPlan.name} - R$ ${basicPlan.price}`)
+
+  const premiumPlan = await prisma.plan.create({
+    data: {
+      name: 'Premium',
+      description: 'Plano completo com recursos avançados para famílias maiores',
+      price: 29.90,
+      features: [
+        'Até 15 membros da família',
+        'Tudo do plano Básico',
+        'Integração com Google Calendar',
+        'Integração com N8N',
+        'Categorização por IA avançada',
+        'Relatórios detalhados',
+        'Suporte prioritário',
+        '5GB de armazenamento',
+        '3 dias grátis para testar',
+      ],
+      maxUsers: 15,
+      maxStorage: 5,
+      isActive: true,
+    },
+  })
+  console.log(`Created plan: ${premiumPlan.name} - R$ ${premiumPlan.price}`)
+
+  const enterprisePlan = await prisma.plan.create({
+    data: {
+      name: 'Enterprise',
+      description: 'Plano empresarial com recursos ilimitados e suporte dedicado',
+      price: 99.90,
+      features: [
+        'Membros ilimitados',
+        'Tudo do plano Premium',
+        'API personalizada',
+        'Integrações avançadas',
+        'Suporte 24/7',
+        'Armazenamento ilimitado',
+        'Relatórios customizados',
+        'Treinamento da equipe',
+        '3 dias grátis para testar',
+      ],
+      maxUsers: 999,
+      maxStorage: 999,
+      isActive: true,
+    },
+  })
+  console.log(`Created plan: ${enterprisePlan.name} - R$ ${enterprisePlan.price}`)
+
   console.log('Seeding finished.')
 }
 

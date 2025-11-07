@@ -542,8 +542,9 @@ export default function IntegrationsPage() {
   const hasN8NIntegration = integrations.some(i => i.provider === 'n8n' && i.isActive)
   const n8nIntegration = integrations.find(i => i.provider === 'n8n' && i.isActive)
   const hasBankConnections = bankConnections.length > 0
-  const hasEvolutionIntegration = integrations.some(i => i.provider === 'evolution_api' && i.isActive)
-  const evolutionIntegration = integrations.find(i => i.provider === 'evolution_api' && i.isActive)
+  // Evolution API - Temporariamente desabilitado
+  // const hasEvolutionIntegration = integrations.some(i => i.provider === 'evolution_api' && i.isActive)
+  // const evolutionIntegration = integrations.find(i => i.provider === 'evolution_api' && i.isActive)
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -613,6 +614,7 @@ export default function IntegrationsPage() {
             <RiBankLine className="w-5 h-5" />
             Conectar Conta Bancária (Open Finance)
           </button>
+          {/* Evolution API - Temporariamente desabilitado
           <button
             onClick={() => setShowEvolutionModal(true)}
             disabled={hasEvolutionIntegration}
@@ -625,6 +627,7 @@ export default function IntegrationsPage() {
             <RiWhatsappFill className="w-5 h-5" />
             {hasEvolutionIntegration ? 'Evolution API já configurada' : 'Configurar Evolution API (WhatsApp)'}
           </button>
+          */}
           <button
             onClick={() => setShowImportModal(true)}
             className="px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-teal-600 text-white hover:shadow-lg hover:shadow-cyan-500/30"
@@ -635,7 +638,7 @@ export default function IntegrationsPage() {
         </div>
       </div>
 
-      {/* Evolution API - Instância WhatsApp */}
+      {/* Evolution API - Temporariamente desabilitado
       {hasEvolutionIntegration && (
         <div className="bg-white rounded-2xl border border-slate-200/60 p-6 mb-6 shadow-sm">
           <h2 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
@@ -734,6 +737,7 @@ export default function IntegrationsPage() {
           </div>
         </div>
       )}
+      */}
 
       {/* Conexões Bancárias */}
       {hasBankConnections && (
@@ -1310,7 +1314,7 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      {/* Modal Evolution API */}
+      {/* Modal Evolution API - Temporariamente desabilitado
       {showEvolutionModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60 space-y-6">
@@ -1433,6 +1437,7 @@ export default function IntegrationsPage() {
           </div>
         </div>
       )}
+      */}
 
       {/* Modal Importação de Extrato */}
       {showImportModal && (

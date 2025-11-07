@@ -193,7 +193,7 @@ export default function CommitmentsPage() {
     setForm({
       title: commitment.title,
       description: commitment.description || '',
-      date: commitment.date.split('T')[0],
+      date: typeof commitment.date === 'string' ? commitment.date.split('T')[0] : new Date(commitment.date).toISOString().split('T')[0],
       time: commitment.time || '',
       status: commitment.status,
     })

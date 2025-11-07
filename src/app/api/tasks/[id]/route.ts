@@ -2,16 +2,20 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/authorization'
 import { prisma } from '@/lib/db'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { session, role, familyId, error } = await requireAuth(req, [])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
 
   try {
+    const { id } = await params
     const task = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         familyId,
       },
       include: {
@@ -29,7 +33,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { session, role, familyId, error } = await requireAuth(req, [])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
@@ -38,12 +45,13 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   const userId = (session.user as any)?.id
 
   try {
+    const { id } = await params
     const { title, description, dueDate, priority, status } = await req.json()
 
     // Verificar se a tarefa existe e pertence à família
     const existingTask = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         familyId,
       },
     })
@@ -58,7 +66,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 
     const task = await prisma.task.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(title && { title }),
         ...(description !== undefined && { description }),
@@ -77,7 +85,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { session, role, familyId, error } = await requireAuth(req, [])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
@@ -86,10 +97,11 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   const userId = (session.user as any)?.id
 
   try {
+    const { id } = await params
     // Verificar se a tarefa existe e pertence à família
     const existingTask = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         familyId,
       },
     })
@@ -104,7 +116,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     }
 
     await prisma.task.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ status: 'ok', message: 'Tarefa excluída com sucesso' })

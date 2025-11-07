@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 
 interface Transaction {
   id: string
-  amount: string
+  amount: string | number
   type: string
   date: string
   category?: {
@@ -28,7 +28,7 @@ export default function FinancialChart({ transactions, onlyPie, onlyLine }: Fina
     .filter(t => t.type === 'expense' && t.category)
     .reduce((acc, transaction) => {
       const categoryName = transaction.category!.name
-      const amount = parseFloat(transaction.amount)
+      const amount = typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : Number(transaction.amount)
       
       const existing = acc.find(item => item.name === categoryName)
       if (existing) {
@@ -43,7 +43,7 @@ export default function FinancialChart({ transactions, onlyPie, onlyLine }: Fina
   const monthlyData = transactions.reduce((acc, transaction) => {
     const date = new Date(transaction.date)
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    const amount = parseFloat(transaction.amount)
+    const amount = typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : Number(transaction.amount)
     
     const existing = acc.find(item => item.month === monthKey)
     if (existing) {
@@ -239,8 +239,8 @@ export function CashFlowChart({ transactions, isDark }: { transactions: Transact
     const pagamentos = transactions.filter(t => t.type === 'expense' && new Date(t.date).getDate() === day)
     return {
       day,
-      recebimentos: recebimentos.reduce((sum, t) => sum + parseFloat(t.amount), 0),
-      pagamentos: pagamentos.reduce((sum, t) => sum + parseFloat(t.amount), 0),
+      recebimentos: recebimentos.reduce((sum, t) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : Number(t.amount)), 0),
+      pagamentos: pagamentos.reduce((sum, t) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : Number(t.amount)), 0),
     }
   })
   // Calcular saldo acumulado

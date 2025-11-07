@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/authorization'
 import { prisma } from '@/lib/db'
+import { n8nService } from '@/lib/n8n'
 
 export async function GET(req: Request) {
   const contextHeader = req.headers.get('x-admin-context')

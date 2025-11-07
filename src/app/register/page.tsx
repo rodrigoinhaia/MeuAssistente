@@ -1,7 +1,7 @@
 'use client'
 
 import { type ReactElement } from 'react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { RiLockPasswordLine, RiUserLine, RiMapPinLine } from 'react-icons/ri'
@@ -33,7 +33,27 @@ export default function RegisterPage(): ReactElement {
   const [codeSent, setCodeSent] = useState(false)
   const [codeError, setCodeError] = useState('')
   const [codeSuccess, setCodeSuccess] = useState('')
-  const [step, setStep] = useState(1) // 1: Dados básicos, 2: Endereço
+  const [step, setStep] = useState(0) // 0: Escolha de plano, 1: Dados básicos, 2: Endereço
+  const [plans, setPlans] = useState<any[]>([])
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('')
+  const [loadingPlans, setLoadingPlans] = useState(true)
+
+  // Carregar planos ao montar componente
+  useEffect(() => {
+    async function loadPlans() {
+      try {
+        const res = await axios.get('/api/plans/public')
+        if (res.data.status === 'ok') {
+          setPlans(res.data.plans || [])
+        }
+      } catch (err) {
+        console.error('Erro ao carregar planos:', err)
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+    loadPlans()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -119,7 +139,17 @@ export default function RegisterPage(): ReactElement {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (step === 0) {
+      // Escolha de plano
+      if (!selectedPlanId) {
+        setError('Selecione um plano para continuar')
+        return
+      }
+      setStep(1)
+      return
+    }
     if (step === 1) {
+      // Dados básicos
       if (!isValidCPF(form.cpf)) {
         setError('CPF inválido')
         return
@@ -142,8 +172,10 @@ export default function RegisterPage(): ReactElement {
         email: form.email,
         password: form.password,
         cpf: form.cpf,
-        phone: form.phone, // O backend espera 'phone' para o usuário
+        phoneNumber: form.phone, // Backend espera phoneNumber
+        phone: form.phone,
         familyName: form.name,
+        planId: selectedPlanId, // ID do plano escolhido
         address: {
           cep: form.cep,
           street: form.street,
@@ -193,14 +225,75 @@ export default function RegisterPage(): ReactElement {
         <div className="bg-white/10 p-8 rounded-xl backdrop-blur-lg w-full max-w-md">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-white mb-2">
-              {step === 1 ? 'CRIAR CONTA' : 'ENDEREÇO'}
+              {step === 0 ? 'ESCOLHA SEU PLANO' : step === 1 ? 'CRIAR CONTA' : 'ENDEREÇO'}
             </h2>
             {error && <div className="text-red-400 text-sm mt-2">{error}</div>}
             {success && <div className="text-green-400 text-sm mt-2">{success}</div>}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {step === 1 ? (
+            {step === 0 ? (
+              <>
+                {/* Escolha de Plano */}
+                {loadingPlans ? (
+                  <div className="text-center py-8">
+                    <div className="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-gray-400 text-sm">Carregando planos...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {plans.map((plan) => (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`p-6 rounded-xl border-2 transition-all text-left ${
+                          selectedPlanId === plan.id
+                            ? 'border-cyan-400 bg-cyan-500/10'
+                            : 'border-gray-600 bg-white/5 hover:border-gray-500'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-cyan-400">
+                              R$ {Number(plan.price).toFixed(2).replace('.', ',')}
+                            </div>
+                            <div className="text-xs text-gray-400">/mês</div>
+                          </div>
+                        </div>
+                        <p className="text-gray-300 text-sm mb-4">{plan.description}</p>
+                        <div className="bg-blue-500/10 px-3 py-2 rounded-lg mb-3">
+                          <p className="text-xs text-blue-300 font-medium">
+                            🎁 3 dias grátis para testar
+                          </p>
+                        </div>
+                        <ul className="space-y-2 text-sm text-gray-300">
+                          {plan.features.slice(0, 4).map((feature: string, idx: number) => (
+                            <li key={idx} className="flex items-center gap-2">
+                              <span className="text-cyan-400">✓</span>
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {selectedPlanId === plan.id && (
+                          <div className="mt-4 text-center">
+                            <span className="text-cyan-400 text-sm font-medium">✓ Selecionado</span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={!selectedPlanId || loadingPlans}
+                  className="w-full bg-gradient-to-r from-cyan-500 to-emerald-500 text-white py-3 rounded-lg font-medium hover:from-cyan-600 hover:to-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continuar
+                </button>
+              </>
+            ) : step === 1 ? (
               <>
                 <div className="space-y-4">
                   {/* Nome */}

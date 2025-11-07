@@ -30,17 +30,12 @@ export async function POST(req: Request) {
       )
     }
 
-    // Testar conexão com N8N
+    // Testar conexão com N8N usando o serviço
     try {
-      const testResponse = await fetch(`${n8nUrl}/api/v1/workflows`, {
-        method: 'GET',
-        headers: {
-          'X-N8N-API-KEY': n8nApiKey,
-          'Content-Type': 'application/json',
-        },
-      })
+      n8nService.setConfig({ url: n8nUrl, apiKey: n8nApiKey, webhookUrl })
+      const isValid = await n8nService.validateConnection()
 
-      if (!testResponse.ok) {
+      if (!isValid) {
         return NextResponse.json(
           { status: 'error', message: 'Erro ao conectar com N8N. Verifique a URL e a API Key.' },
           { status: 400 }
@@ -123,32 +118,20 @@ export async function GET(req: Request) {
     const config = JSON.parse(integration.scope || '{}')
     const { n8nUrl, n8nApiKey } = config
 
-    // Buscar workflows do N8N
+    // Configurar serviço N8N
+    n8nService.setConfig({ url: n8nUrl, apiKey: n8nApiKey })
+
+    // Buscar workflows do N8N usando o serviço
     try {
-      const workflowsResponse = await fetch(`${n8nUrl}/api/v1/workflows`, {
-        method: 'GET',
-        headers: {
-          'X-N8N-API-KEY': n8nApiKey,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!workflowsResponse.ok) {
-        return NextResponse.json(
-          { status: 'error', message: 'Erro ao verificar status do N8N.' },
-          { status: 500 }
-        )
-      }
-
-      const workflows = await workflowsResponse.json()
-      const activeWorkflows = workflows.data?.filter((w: any) => w.active) || []
+      const workflows = await n8nService.getWorkflows()
+      const activeWorkflows = workflows.filter((w: any) => w.active)
 
       return NextResponse.json({
         status: 'ok',
         n8n: {
           connected: true,
           url: n8nUrl,
-          totalWorkflows: workflows.data?.length || 0,
+          totalWorkflows: workflows.length,
           activeWorkflows: activeWorkflows.length,
           workflows: activeWorkflows.map((w: any) => ({
             id: w.id,

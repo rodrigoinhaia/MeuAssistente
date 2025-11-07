@@ -16,6 +16,8 @@ export async function middleware(req: NextRequest) {
     '/api/db-check',
     '/api/test-auth',
     '/api/debug-session',
+    '/api/plans/public', // Rota pública para listar planos
+    '/api/webhooks/asaas', // Webhook do Asaas (não precisa autenticação)
     '/login',
     '/register',
     '/_next',

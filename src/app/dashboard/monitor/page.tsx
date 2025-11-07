@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import apiClient from '@/lib/axios-config'
 
 interface SystemStatus {
   status: 'healthy' | 'warning' | 'critical'
@@ -42,20 +43,20 @@ export default function MonitorPage() {
     setLoading(true)
     setError('')
     try {
-      const response = await fetch('/api/system/monitor')
-      const data = await response.json()
-
-      if (data.status === 'ok') {
-        setSystemStatus(data.systemStatus)
-        setServices(data.services || [])
+      const res = await apiClient.get('/system/monitor')
+      
+      if (res.data.status === 'ok') {
+        setSystemStatus(res.data.systemStatus)
+        setServices(res.data.services || [])
       } else {
-        setError(data.message || 'Falha ao atualizar dados de monitoramento')
+        setError(res.data.message || 'Falha ao atualizar dados de monitoramento')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar status do sistema:', err)
-      setError('Falha ao atualizar dados de monitoramento')
+      setError(err.response?.data?.message || 'Falha ao atualizar dados de monitoramento')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const getStatusColor = (status: string) => {
@@ -90,8 +91,25 @@ export default function MonitorPage() {
     }
   }
 
-  if (status === 'loading') return <div>Carregando sessão...</div>
-  if (!session || !session.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) return <div>Acesso restrito.</div>
+  if (status === 'loading') {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
+      </div>
+    )
+  }
+
+  const userRole = (session?.user as any)?.role
+  if (!session || !session.user || (userRole !== 'OWNER' && userRole !== 'SUPER_ADMIN')) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700 shadow-sm">
+          <p className="font-semibold">Acesso restrito.</p>
+          <p className="text-sm mt-1">Apenas Owners ou Super Admins podem acessar o monitoramento do sistema.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading || !systemStatus) {
     return (

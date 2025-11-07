@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import axios from 'axios'
+import apiClient from '@/lib/axios-config'
 import Link from 'next/link'
 import FinancialChart from './components/FinancialChart'
 import { CashFlowChart } from './components/FinancialChart'
@@ -65,29 +65,29 @@ export default function DashboardPage() {
     try {
       // Buscar dados de diferentes APIs
       const [transactionsRes, commitmentsRes, tasksRes, integrationsRes, statsRes] = await Promise.all([
-        axios.get('/api/transactions'),
-        axios.get('/api/commitments'),
-        axios.get('/api/tasks'),
-        axios.get('/api/integrations'),
-        axios.get('/api/dashboard/stats'),
+        apiClient.get('/transactions'),
+        apiClient.get('/commitments'),
+        apiClient.get('/tasks'),
+        apiClient.get('/integrations'),
+        apiClient.get('/dashboard/stats'),
       ])
 
-      const transactionsData = transactionsRes.data.transactions || []
-      const commitments = commitmentsRes.data.commitments || []
-      const tasks = tasksRes.data.tasks || []
-      const integrations = integrationsRes.data.integrations || []
-      const stats = statsRes.data.stats || {}
+      const transactionsData = transactionsRes.data.status === 'ok' ? transactionsRes.data.transactions || [] : []
+      const commitments = commitmentsRes.data.status === 'ok' ? commitmentsRes.data.commitments || [] : []
+      const tasks = tasksRes.data.status === 'ok' ? tasksRes.data.tasks || [] : []
+      const integrations = integrationsRes.data.status === 'ok' ? integrationsRes.data.integrations || [] : []
+      const stats = statsRes.data.status === 'ok' ? statsRes.data.stats || {} : {}
 
       setTransactions(transactionsData)
 
-      // Calcular métricas
+      // Calcular métricas (amount pode ser string ou number)
       const totalIncome = transactionsData
         .filter((t: any) => t.type === 'income')
-        .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0)
+        .reduce((sum: number, t: any) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : Number(t.amount)), 0)
 
       const totalExpense = transactionsData
         .filter((t: any) => t.type === 'expense')
-        .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0)
+        .reduce((sum: number, t: any) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : Number(t.amount)), 0)
 
       const today = new Date().toISOString().split('T')[0]
       const commitmentsToday = commitments.filter((c: any) => c.date.startsWith(today))

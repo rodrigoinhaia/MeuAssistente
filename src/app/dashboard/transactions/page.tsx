@@ -209,7 +209,7 @@ export default function TransactionsPage() {
       tx.description,
       tx.category ? tx.category.name : '-',
       tx.type === 'expense' ? 'Despesa' : 'Receita',
-      Number(tx.amount).toFixed(2).replace('.', ','),
+      (typeof tx.amount === 'string' ? parseFloat(tx.amount) : Number(tx.amount)).toFixed(2).replace('.', ','),
       tx.status === 'paid' ? 'Paga' : tx.status === 'overdue' ? 'Vencida' : 'Pendente',
       tx.user?.name || '-',
     ])
@@ -220,8 +220,8 @@ export default function TransactionsPage() {
 
   // Estatísticas calculadas
   const stats = useMemo(() => {
-    const expenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0)
-    const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0)
+    const expenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : Number(t.amount)), 0)
+    const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : Number(t.amount)), 0)
     const balance = income - expenses
     const pending = transactions.filter(t => t.status === 'pending').length
     const overdue = transactions.filter(t => t.status === 'overdue').length
@@ -520,7 +520,7 @@ export default function TransactionsPage() {
                     {/* Valor */}
                     <div className="flex-shrink-0 text-right ml-4">
                       <p className={`text-xl font-bold ${isExpense ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {isExpense ? '-' : '+'} R$ {Number(tx.amount).toFixed(2)}
+                        {isExpense ? '-' : '+'} R$ {(typeof tx.amount === 'string' ? parseFloat(tx.amount) : Number(tx.amount)).toFixed(2)}
                       </p>
                     </div>
 

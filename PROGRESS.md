@@ -1,16 +1,17 @@
 # Progresso do Projeto - MeuAssistente
 
-**Última Atualização:** 20/10/2025  
+**Última Atualização:** 20/01/2025  
 **Status Geral:** 🟡 Em Andamento
 
 ### Próximas Etapas (Checklist)
-- [ ] Conectar páginas do dashboard às APIs reais (Prisma) – dados em tempo real
-- [ ] Implementar sistema de assinaturas (planos, assinaturas, pagamentos, middleware)
-- [ ] Preparar integração com Asaas (webhooks, faturas, reconciliação de pagamentos)
-- [ ] Configurar N8N (ambiente, workflows, logs e monitoramento)
+- [x] Implementar sistema de assinaturas (planos, assinaturas, pagamentos, middleware) ✅
+- [x] Preparar integração com Asaas (webhooks, faturas, reconciliação de pagamentos) ✅
+- [x] Conectar páginas do dashboard às APIs reais (Prisma) – dados em tempo real ✅
+- [x] Configurar N8N (ambiente básico, serviços, webhooks) ✅
 - [ ] Implementar identificação por número e processamento WhatsApp
 - [ ] Integrar Google Calendar/Tasks com refresh de token e sincronização bidirecional
 - [ ] Criar automações (lembretes, resumos financeiros, notificações)
+- [x] Implementar notificações de expiração de trial (email) ✅
 - [ ] Testes (unitários, integração, carga) e hardening
 - [ ] Deploy (Vercel), observabilidade e backups
 
@@ -230,29 +231,122 @@
 4. **Agentes de IA**: API Routes são perfeitas para webhooks
 5. **Custo-benefício**: Melhor para startups e MVPs
 
-## Etapa 7: Sistema de Assinaturas
-- **Status**: ⏳ Não Iniciado
-- **Objetivo**: Implementar sistema de pagamentos e assinaturas
-- **Tarefas Pendentes**:
-  - [ ] **Preparação para integração Asaas**
-  - [ ] Gerenciamento de planos
-  - [ ] Middleware de verificação de assinatura
-  - [ ] **Estrutura para único plano de assinatura**
-- **Estimativa**: 1 semana
+## Etapa 7: Sistema de Assinaturas e Trial
+- **Status**: ✅ Concluído
+- **Objetivo**: Implementar sistema de pagamentos e assinaturas com trial gratuito de 3 dias
+- **Solução Adotada**:
+  - ✅ **Trial Gratuito de 3 dias**: Todos os novos usuários recebem 3 dias grátis automaticamente
+  - ✅ **Integração com Asaas**: Gateway de pagamento configurado (sandbox/produção)
+  - ✅ **Planos no Seed**: Básico (R$ 19,90), Premium (R$ 29,90), Enterprise (R$ 99,90)
+  - ✅ **Fluxo de Registro**: Usuário escolhe plano → Preenche dados → Recebe trial de 3 dias
+  - ✅ **Middleware de Verificação**: Bloqueia acesso após trial expirado
+  - ✅ **Página de Upgrade**: Redirecionamento automático quando trial expira
+  - ✅ **Página de Checkout**: Finalização de pagamento com múltiplas formas (Cartão, Boleto, PIX)
+  - ✅ **Webhook do Asaas**: Processa confirmações de pagamento automaticamente
+  - ✅ **API de Assinaturas**: Cria/atualiza assinaturas e cobranças
+- **Artefatos Criados**:
+  - `src/app/api/auth/register/route.ts` - Registro com trial de 3 dias
+  - `src/app/api/subscriptions/create/route.ts` - Criação de assinatura e cobrança
+  - `src/app/api/subscriptions/check-trial/route.ts` - Verificação de status do trial
+  - `src/app/api/webhooks/asaas/route.ts` - Webhook para notificações do Asaas
+  - `src/app/dashboard/upgrade/page.tsx` - Página de escolha de plano
+  - `src/app/dashboard/checkout/page.tsx` - Página de checkout/pagamento
+  - `src/lib/asaas.ts` - Serviço de integração com Asaas
+  - `prisma/seed.ts` - Planos criados automaticamente
+- **Fluxo Implementado**:
+  1. Usuário se registra e escolhe plano
+  2. Sistema cria família, usuário e assinatura com status 'trial'
+  3. Trial válido por 3 dias (endDate = hoje + 3 dias)
+  4. Cliente e assinatura criados no Asaas (começa após trial)
+  5. Durante trial: usuário pode usar sistema normalmente
+  6. Após trial expirar: sistema bloqueia acesso e redireciona para upgrade
+  7. Usuário escolhe plano e finaliza pagamento
+  8. Webhook do Asaas confirma pagamento e ativa assinatura
+- **Desafios**:
+  - Configurar webhook no painel do Asaas
+  - Testar fluxo completo de pagamento
+- **Alterações no Planejamento**: ✅ Implementado trial de 3 dias conforme solicitado
+
+## Etapa 7.2: API de Settings e Correção do Monitor
+- **Status**: ✅ Concluído
+- **Objetivo**: Criar API de configurações do sistema e corrigir página de monitoramento
+- **Solução Adotada**:
+  - ✅ **API de Settings**: Endpoint `/api/settings` para gerenciar configurações globais
+  - ✅ **Página Settings Conectada**: Carrega e salva configurações via API
+  - ✅ **Página Monitor Corrigida**: Usa `apiClient` em vez de `fetch` direto
+  - ✅ **Validações**: Email, valores numéricos, permissões
+  - ✅ **Configurações Padrão**: Valores iniciais definidos
+- **Artefatos Criados**:
+  - `src/app/api/settings/route.ts` - API de configurações
+  - `src/app/dashboard/settings/page.tsx` - Conectado à API
+  - `src/app/dashboard/monitor/page.tsx` - Corrigido para usar apiClient
+- **Configurações Gerenciadas**:
+  - Nome da empresa
+  - Email de suporte
+  - Máximo de usuários por família
+  - Dias de trial
+  - Integrações (WhatsApp, Google)
+  - Notificações (Email, SMS)
+  - Modo manutenção
+  - Modo debug
+- **Desafios**: Nenhum identificado
+- **Alterações no Planejamento**: ✅ Settings e Monitor totalmente funcionais
+
+## Etapa 7.1: Sistema de Notificações de Trial
+- **Status**: ✅ Concluído
+- **Objetivo**: Implementar notificações automáticas por email para trials expirando e expirados
+- **Solução Adotada**:
+  - ✅ **Integração com Resend**: Serviço de email profissional configurado
+  - ✅ **Templates HTML Responsivos**: Emails profissionais e modernos
+  - ✅ **Notificação 2 dias antes**: Aviso quando faltam 2 dias para expirar
+  - ✅ **Notificação quando expira**: Aviso de bloqueio com link para upgrade
+  - ✅ **Notificação de pagamento**: Email quando pagamento é confirmado
+  - ✅ **Cron Job Automático**: Execução diária às 9h (configurado no vercel.json)
+  - ✅ **API Manual**: Endpoint para disparar notificações manualmente
+  - ✅ **Integração com Webhook Asaas**: Email automático ao confirmar pagamento
+- **Artefatos Criados**:
+  - `src/lib/email.ts` - Serviço de envio de emails com templates
+  - `src/app/api/notifications/trial/route.ts` - API para notificações manuais
+  - `src/app/api/cron/trial-notifications/route.ts` - Cron job automático
+  - `vercel.json` - Configuração de cron no Vercel
+  - `NOTIFICACOES_TRIAL.md` - Documentação completa
+- **Templates de Email**:
+  - Trial Expirando (2 dias antes)
+  - Trial Expirado
+  - Pagamento Confirmado
+- **Desafios**:
+  - Configurar Resend API Key
+  - Testar deliverability dos emails
+- **Alterações no Planejamento**: ✅ Sistema completo de notificações implementado
 
 ## Etapa 8: N8N e Agentes de IA
-- **Status**: ⏳ Não Iniciado
+- **Status**: 🟡 Em Andamento (Básico Configurado)
 - **Objetivo**: Configurar N8N e desenvolver sistema de processamento
+- **Solução Adotada**:
+  - ✅ **Serviço de Integração N8N**: Classe `N8NService` para comunicação com API do N8N
+  - ✅ **Webhook Endpoint**: `/api/webhooks/n8n` para receber dados dos workflows
+  - ✅ **Docker Compose**: N8N configurado e pronto para uso
+  - ✅ **API de Integração**: Conectar/desconectar N8N via dashboard
+  - ✅ **API de Workflows**: Listar e gerenciar workflows do N8N
+  - ✅ **Documentação**: Guia completo de setup em `docs/N8N_SETUP.md`
+- **Artefatos Criados**:
+  - `src/lib/n8n.ts` - Serviço de integração com N8N
+  - `src/app/api/webhooks/n8n/route.ts` - Webhook para receber dados do N8N
+  - `src/app/api/integrations/n8n/route.ts` - API de conexão N8N (atualizada)
+  - `src/app/api/n8n/workflows/route.ts` - API de workflows (atualizada)
+  - `docs/N8N_SETUP.md` - Documentação completa
 - **Tarefas Pendentes**:
-  - [ ] **Setup do ambiente N8N**
-  - [ ] **Configuração do fluxo de processamento**
+  - [ ] Criar workflows básicos de exemplo (WhatsApp, Google Calendar, Google Tasks)
   - [ ] Integração com WhatsApp Business API
-  - [ ] **Sistema de identificação de clientes por número**
+  - [ ] Sistema de identificação de clientes por número (parcialmente implementado)
   - [ ] Processador de linguagem natural
   - [ ] Categorização automática de transações
   - [ ] Sistema de respostas inteligentes
-  - [ ] **Integração com Google Calendar e Tasks**
-- **Estimativa**: 3 semanas
+  - [ ] Integração completa com Google Calendar e Tasks
+- **Desafios**:
+  - Configurar workflows no N8N
+  - Testar comunicação bidirecional
+- **Alterações no Planejamento**: ✅ Estrutura básica do N8N implementada
 
 ## Etapa 9: Integrações Externas
 - **Status**: ⏳ Não Iniciado
@@ -300,9 +394,11 @@
 ## Próximos Passos Recomendados
 
 ### Prioridade Alta
-1. **Integração de Dados Reais**: Conectar páginas administrativas com APIs do Prisma
-2. **Sistema de Assinaturas**: Implementar lógica de planos e pagamentos
-3. **Setup N8N**: Configurar ambiente de processamento
+1. **Configurar Webhook do Asaas**: Configurar URL do webhook no painel do Asaas para receber notificações de pagamento
+2. **Configurar Resend**: Adicionar API Key do Resend no .env para envio de emails
+3. **Testar Fluxo Completo**: Testar registro → trial → expiração → upgrade → pagamento → ativação
+4. **Testar Notificações**: Verificar se emails estão sendo enviados corretamente
+5. **Setup N8N**: Configurar ambiente de processamento
 
 ### Prioridade Média
 1. **Integrações Google**: Calendar e Tasks APIs
@@ -316,11 +412,13 @@
 
 ## Métricas de Acompanhamento
 
-- **Progresso Geral**: 20% (planejamento + ambiente configurado)
-- **Tempo Decorrido**: 0 semanas
-- **Tempo Restante**: 17 semanas
+- **Progresso Geral**: 45% (planejamento + ambiente + core backend + frontend + sistema de assinaturas + N8N básico + Settings + Monitor)
+- **Tempo Decorrido**: ~4 semanas
+- **Tempo Restante**: ~13 semanas
 - **Orçamento**: A definir
 - **Qualidade**: A avaliar
+- **Fases Concluídas**: 1, 2, 3, 4, 5, 6, 7 ✅
+- **Fases Pendentes**: 8 (N8N), 9 (Integrações), 10 (Automações), 11 (Deploy)
 
 ## Observações
 
