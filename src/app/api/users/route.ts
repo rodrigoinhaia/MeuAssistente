@@ -5,16 +5,20 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireAuth(request, ['OWNER', 'SUPER_ADMIN']);
+  const contextHeader = request.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const authResult = await requireAuth(request, ['OWNER', 'SUPER_ADMIN'], adminContext);
   if (authResult.error) {
     return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status });
   }
 
-  const { role, familyId } = authResult;
+  const { role, familyId, adminContext: context } = authResult;
 
   try {
-    // SUPER_ADMIN vê todos os usuários, outros roles só da sua família
-    const whereClause = role === 'SUPER_ADMIN' ? {} : { familyId };
+    // SUPER_ADMIN em modo admin vê todos os usuários (apenas para configurações)
+    // SUPER_ADMIN em modo família vê apenas usuários da sua família (comporta-se como OWNER)
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : { familyId };
     
     const users = await prisma.user.findMany({
       where: whereClause,
@@ -40,7 +44,10 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  const authResult = await requireAuth(request, ['OWNER', 'SUPER_ADMIN']);
+  const contextHeader = request.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const authResult = await requireAuth(request, ['OWNER', 'SUPER_ADMIN'], adminContext);
   if (authResult.error) {
     return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status });
   }
@@ -53,7 +60,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'ID do usuário é obrigatório.' }, { status: 400 });
     }
     
-    const { role: userRole, familyId } = authResult;
+    const { role: userRole, familyId, adminContext: context } = authResult;
     
     // Fetch the user to be updated to check their current role and family
     const userToUpdate = await prisma.user.findUnique({
@@ -66,9 +73,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
     }
 
-    // SUPER_ADMIN pode editar qualquer usuário, outros roles só da sua família
-    if (userRole !== 'SUPER_ADMIN' && userToUpdate.familyId !== familyId) {
-        return NextResponse.json({ error: 'Usuário não pertence a esta família.' }, { status: 403 });
+    // SUPER_ADMIN em modo admin pode editar qualquer usuário (configurações globais)
+    // SUPER_ADMIN em modo família só pode editar usuários da sua família (comporta-se como OWNER)
+    if (userRole === 'SUPER_ADMIN' && context === 'admin') {
+      // Pode editar qualquer usuário
+    } else if (userToUpdate.familyId !== familyId) {
+      return NextResponse.json({ error: 'Usuário não pertence a esta família.' }, { status: 403 });
     }
 
     // Security validations

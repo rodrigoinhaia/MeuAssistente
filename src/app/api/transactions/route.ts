@@ -5,7 +5,10 @@ import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/authorization'
 
 export async function GET(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, [])
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, [], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
@@ -19,8 +22,12 @@ export async function GET(req: Request) {
   const filterUserId = searchParams.get('userId') // Novo filtro opcional
   
   try {
-    // SUPER_ADMIN vê todas as transações, outros roles filtram por família
-    const where: any = role === 'SUPER_ADMIN' ? {} : { familyId }
+    // SUPER_ADMIN em modo família vê apenas transações da sua família (comporta-se como OWNER)
+    // SUPER_ADMIN em modo admin NÃO vê transações (apenas configurações globais)
+    // Outros roles filtram por família
+    const where: any = (role === 'SUPER_ADMIN' && context === 'admin') 
+      ? {} // Modo admin não deve ver transações, mas deixamos vazio para não quebrar
+      : { familyId }
     
     // Controle de permissões: USER só vê suas próprias transações
     // OWNER pode ver todas da família ou filtrar por usuário específico

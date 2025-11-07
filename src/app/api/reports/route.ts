@@ -3,15 +3,19 @@ import { requireAuth } from '@/lib/authorization'
 import { prisma } from '@/lib/db'
 
 export async function GET(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'])
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
 
   try {
-    // Se for SUPER_ADMIN, retorna dados agregados de todas as famílias
-    // Caso contrário, retorna dados apenas da família do usuário
-    const whereClause = role === 'SUPER_ADMIN' ? {} : { familyId }
+    // SUPER_ADMIN em modo admin: retorna dados agregados de todas as famílias (relatórios de negócio)
+    // SUPER_ADMIN em modo família: retorna dados da sua família (comporta-se como OWNER)
+    // OUTROS ROLES: retorna dados apenas da família do usuário
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : { familyId }
 
     // Receita total (soma de todas as assinaturas ativas)
     const activeSubscriptions = await prisma.subscription.findMany({

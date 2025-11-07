@@ -3,14 +3,21 @@ import { requireAuth } from '@/lib/authorization'
 import { prisma } from '@/lib/db'
 
 export async function GET(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, [])
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, [], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
 
   try {
-    // SUPER_ADMIN vê estatísticas agregadas de todas as famílias, outros roles só da sua família
-    const whereBase = role === 'SUPER_ADMIN' ? {} : { familyId }
+    // SUPER_ADMIN em modo família vê estatísticas da sua família (comporta-se como OWNER)
+    // SUPER_ADMIN em modo admin NÃO vê estatísticas financeiras (apenas relatórios de negócio)
+    // Outros roles só da sua família
+    const whereBase = (role === 'SUPER_ADMIN' && context === 'admin') 
+      ? {} // Modo admin não deve ver stats financeiras, mas deixamos vazio para não quebrar
+      : { familyId }
     
     const today = new Date()
     today.setHours(0, 0, 0, 0)

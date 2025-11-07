@@ -5,13 +5,22 @@ import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/authorization'
 
 export async function GET(req: Request) {
-  // Apenas SUPER_ADMIN pode ver todas as famílias
-  const { session, role, familyId, error } = await requireAuth(req, ['SUPER_ADMIN'])
+  // Apenas SUPER_ADMIN em modo admin pode ver todas as famílias
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, familyId, error } = await requireAuth(req, ['SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
+
+  // Apenas em modo admin pode ver todas as famílias
+  if (role === 'SUPER_ADMIN' && adminContext !== 'admin') {
+    return NextResponse.json({ status: 'error', message: 'Acesso apenas no modo Admin' }, { status: 403 })
+  }
+
   try {
-    // SUPER_ADMIN vê todas as famílias
+    // SUPER_ADMIN em modo admin vê todas as famílias (apenas informações básicas, sem dados financeiros)
     const families = await prisma.family.findMany({
       select: {
         id: true,
@@ -20,6 +29,11 @@ export async function GET(req: Request) {
         subscriptionPlan: true,
         isActive: true,
         createdAt: true,
+        _count: {
+          select: {
+            users: true,
+          }
+        }
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -30,11 +44,20 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  // Apenas SUPER_ADMIN pode editar famílias
-  const { session, role, familyId, error } = await requireAuth(req, ['SUPER_ADMIN'])
+  // Apenas SUPER_ADMIN em modo admin pode editar famílias
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, familyId, error } = await requireAuth(req, ['SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
+
+  // Apenas em modo admin pode editar famílias
+  if (role === 'SUPER_ADMIN' && adminContext !== 'admin') {
+    return NextResponse.json({ status: 'error', message: 'Acesso apenas no modo Admin' }, { status: 403 })
+  }
+
   try {
     const { id, name, phoneNumber, subscriptionPlan, isActive } = await req.json()
     if (!id) {

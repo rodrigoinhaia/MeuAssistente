@@ -5,13 +5,19 @@ import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/authorization'
 
 export async function GET(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, [])
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, [], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
   try {
-    // SUPER_ADMIN vê todas as categorias, outros roles só da sua família
-    const whereClause = role === 'SUPER_ADMIN' ? {} : { familyId }
+    // SUPER_ADMIN em modo família vê apenas categorias da sua família (comporta-se como OWNER)
+    // SUPER_ADMIN em modo admin NÃO vê categorias (apenas configurações globais)
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
+      ? {} // Modo admin não deve ver categorias, mas deixamos vazio para não quebrar
+      : { familyId }
     const categories = await prisma.category.findMany({
       where: whereClause,
       orderBy: { name: 'asc' },

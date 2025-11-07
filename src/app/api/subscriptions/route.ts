@@ -12,14 +12,21 @@ export async function GET(request: NextRequest) {
 
     const userRole = (session.user as any)?.role
     const userFamilyId = (session.user as any)?.familyId
+    const contextHeader = request.headers.get('x-admin-context')
+    const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
 
-    // SUPER_ADMIN pode ver todas as assinaturas, outros roles só da sua família
-    if (userRole !== 'SUPER_ADMIN' && userRole !== 'OWNER') {
+    // SUPER_ADMIN em modo admin pode ver todas as assinaturas
+    // SUPER_ADMIN em modo família e OWNER só da sua família
+    if (userRole === 'SUPER_ADMIN' && adminContext === 'admin') {
+      // Pode ver todas
+    } else if (userRole !== 'OWNER' && !(userRole === 'SUPER_ADMIN' && adminContext === 'family')) {
       return Response.json({ error: 'Não autorizado' }, { status: 403 })
     }
 
     // Busca assinaturas usando Prisma (seguro contra SQL injection)
-    const whereClause = userRole === 'SUPER_ADMIN' ? {} : { familyId: userFamilyId }
+    const whereClause = (userRole === 'SUPER_ADMIN' && adminContext === 'admin') 
+      ? {} 
+      : { familyId: userFamilyId }
     
     const subscriptions = await prisma.subscription.findMany({
       where: whereClause,
@@ -73,9 +80,14 @@ export async function PATCH(request: NextRequest) {
 
     const userRole = (session.user as any)?.role
     const userFamilyId = (session.user as any)?.familyId
+    const contextHeader = request.headers.get('x-admin-context')
+    const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
 
-    // SUPER_ADMIN pode editar qualquer assinatura, outros roles só da sua família
-    if (userRole !== 'SUPER_ADMIN' && userRole !== 'OWNER') {
+    // SUPER_ADMIN em modo admin pode editar qualquer assinatura
+    // SUPER_ADMIN em modo família e OWNER só da sua família
+    if (userRole === 'SUPER_ADMIN' && adminContext === 'admin') {
+      // Pode editar qualquer
+    } else if (userRole !== 'OWNER' && !(userRole === 'SUPER_ADMIN' && adminContext === 'family')) {
       return Response.json({ error: 'Não autorizado' }, { status: 403 })
     }
 
@@ -92,8 +104,11 @@ export async function PATCH(request: NextRequest) {
       return Response.json({ error: 'Assinatura não encontrada' }, { status: 404 })
     }
 
-    // SUPER_ADMIN pode editar qualquer assinatura, outros roles só da sua família
-    if (userRole !== 'SUPER_ADMIN' && subscriptionToUpdate.familyId !== userFamilyId) {
+    // SUPER_ADMIN em modo admin pode editar qualquer assinatura
+    // SUPER_ADMIN em modo família e outros roles só da sua família
+    if (userRole === 'SUPER_ADMIN' && adminContext === 'admin') {
+      // Pode editar qualquer
+    } else if (subscriptionToUpdate.familyId !== userFamilyId) {
       return Response.json({ error: 'Não autorizado para editar esta assinatura' }, { status: 403 })
     }
 

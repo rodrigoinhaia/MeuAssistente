@@ -36,8 +36,29 @@ export default function DashboardLayout({
   const userRole = (session.user as any)?.role
   const familyId = (session.user as any)?.familyId
   
-  if (!userRole || !familyId) {
+  // SUPER_ADMIN pode não ter familyId se estiver em modo admin, mas precisa ter família própria
+  if (!userRole) {
     console.error('[DASHBOARD_LAYOUT] Sessão incompleta:', {
+      hasRole: !!userRole,
+      hasFamilyId: !!familyId,
+      session: session
+    })
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
+        <div className="text-center">
+          <p className="text-xl mb-4">Sessão inválida. Faça login novamente.</p>
+          <a href="/login" className="text-cyan-400 hover:text-cyan-300 underline">
+            Fazer Login
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // SUPER_ADMIN sempre tem familyId (faz parte de uma família)
+  // Mas pode alternar entre modo família e modo admin
+  if (userRole !== 'SUPER_ADMIN' && !familyId) {
+    console.error('[DASHBOARD_LAYOUT] Sessão incompleta (sem familyId):', {
       hasRole: !!userRole,
       hasFamilyId: !!familyId,
       session: session
