@@ -131,13 +131,75 @@ export async function POST(req: Request) {
  * Processa mensagem do WhatsApp
  */
 async function processWhatsAppMessage(familyId: string, data: any) {
-  // Exemplo de processamento:
-  // - Extrair informações da mensagem
-  // - Identificar intenção (criar transação, compromisso, etc.)
-  // - Criar registro no banco
+  try {
+    // Buscar família para obter phoneNumber
+    const family = await prisma.family.findUnique({
+      where: { id: familyId },
+      select: { phoneNumber: true },
+    })
 
-  // Por enquanto, apenas log
-  console.log('[PROCESS_WHATSAPP]', { familyId, data })
+    if (!family) {
+      console.error('[PROCESS_WHATSAPP] Família não encontrada:', familyId)
+      return
+    }
+
+    // Estrutura esperada do N8N:
+    // {
+    //   phoneNumber?: string,
+    //   message: string,
+    //   messageType?: 'text' | 'image' | 'audio',
+    //   mediaUrl?: string,
+    // }
+
+    const phoneNumber = data.phoneNumber || family.phoneNumber
+    const message = data.message || ''
+    const messageType = data.messageType || 'text'
+
+    if (!message) {
+      console.warn('[PROCESS_WHATSAPP] Mensagem vazia recebida')
+      return
+    }
+
+    // Validar se o usuário está cadastrado ANTES de processar
+    const { identifyUserByPhone, getUnregisteredUserMessage } = await import(
+      '@/lib/whatsapp/user-identification'
+    )
+    const identification = await identifyUserByPhone(phoneNumber)
+
+    if (!identification) {
+      // Usuário não cadastrado - retornar mensagem informativa
+      return {
+        success: true,
+        response: getUnregisteredUserMessage(),
+        requiresConfirmation: false,
+        action: 'none',
+        userRegistered: false,
+      }
+    }
+
+    // Processar mensagem usando o novo processador
+    const { processWhatsAppMessage } = await import('@/lib/whatsapp/message-processor')
+    const result = await processWhatsAppMessage(phoneNumber, message, messageType)
+
+    // TODO: Enviar resposta via WhatsApp
+    // Por enquanto, apenas log
+    console.log('[PROCESS_WHATSAPP] Resposta gerada:', {
+      phoneNumber,
+      response: result.response,
+      requiresConfirmation: result.requiresConfirmation,
+    })
+
+    // Retornar resultado para o N8N processar e enviar
+    return {
+      success: true,
+      response: result.response,
+      requiresConfirmation: result.requiresConfirmation,
+      action: result.action,
+    }
+  } catch (error) {
+    console.error('[PROCESS_WHATSAPP] Erro ao processar:', error)
+    throw error
+  }
 }
 
 /**

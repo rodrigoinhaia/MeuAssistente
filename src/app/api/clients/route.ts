@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../auth/[...nextauth]/authOptions'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/authorization'
 
@@ -52,4 +54,5 @@ export async function PATCH(req: Request) {
   } catch (error) {
     return NextResponse.json({ status: 'error', message: 'Erro ao atualizar cliente', error: String(error) }, { status: 500 })
   }
-} 
+}
+

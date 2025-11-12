@@ -25,6 +25,7 @@
     "autoprefixer": "^10.4.17",
     "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
+    "chrono-node": "^2.9.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "csv-parser": "^3.2.0",
