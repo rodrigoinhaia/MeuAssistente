@@ -27,10 +27,16 @@ export async function PUT(
     const { name, type, color, icon, isActive } = await req.json()
 
     // Verificar se a categoria existe e pertence à família
+    if (!familyId) {
+      return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+    }
+
+    const validFamilyId: string = familyId
+
     const existingCategory = await prisma.category.findFirst({
       where: {
         id,
-        familyId,
+        familyId: validFamilyId,
       },
     })
 
@@ -42,7 +48,7 @@ export async function PUT(
     if ((name && name !== existingCategory.name) || (type && type !== existingCategory.type)) {
       const exists = await prisma.category.findFirst({
         where: {
-          familyId,
+          familyId: validFamilyId,
           name: name || existingCategory.name,
           type: type || existingCategory.type,
           id: { not: id },
@@ -94,10 +100,16 @@ export async function DELETE(
     const { id } = await params
 
     // Verificar se a categoria existe e pertence à família
+    if (!familyId) {
+      return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+    }
+
+    const validFamilyId: string = familyId
+
     const existingCategory = await prisma.category.findFirst({
       where: {
         id,
-        familyId,
+        familyId: validFamilyId,
       },
     })
 

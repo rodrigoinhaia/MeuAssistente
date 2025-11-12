@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import apiClient from '@/lib/axios-config'
 import {
   RiCheckboxCircleLine,
-  RiCreditCardLine,
   RiBankCardLine,
   RiQrCodeLine,
   RiArrowLeftLine,
@@ -176,7 +175,7 @@ export default function CheckoutPage() {
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <RiCreditCardLine className={`w-6 h-6 mb-2 ${paymentMethod === 'CREDIT_CARD' ? 'text-cyan-600' : 'text-slate-400'}`} />
+                <RiBankCardLine className={`w-6 h-6 mb-2 ${paymentMethod === 'CREDIT_CARD' ? 'text-cyan-600' : 'text-slate-400'}`} />
                 <p className="font-medium text-slate-800">Cartão de Crédito</p>
                 <p className="text-xs text-slate-500 mt-1">Aprovação imediata</p>
               </button>
