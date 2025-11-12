@@ -24,8 +24,14 @@ export async function GET(req: Request) {
   try {
     // SUPER_ADMIN em modo família vê apenas categorias da sua família (comporta-se como OWNER)
     // Outros roles vêem apenas categorias da sua família
+    if (!familyId) {
+      return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+    }
+
+    const validFamilyId: string = familyId
+
     const categories = await prisma.category.findMany({
-      where: { familyId },
+      where: { familyId: validFamilyId },
       orderBy: { name: 'asc' },
     })
     return NextResponse.json({ status: 'ok', categories })
