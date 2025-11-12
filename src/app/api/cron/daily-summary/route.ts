@@ -10,7 +10,7 @@ import { sendDailySummary } from '@/lib/whatsapp/scheduled-messages'
 export async function GET(req: Request) {
   try {
     // Verificar autenticação (cron secret)
-    const headersList = headers()
+    const headersList = await headers()
     const authHeader = headersList.get('authorization')
     const cronSecret = process.env.CRON_SECRET
 

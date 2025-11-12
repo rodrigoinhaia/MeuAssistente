@@ -14,8 +14,15 @@ export async function GET(req: Request) {
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const status = searchParams.get('status')
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+
   try {
-    const where: any = { familyId }
+    const where: any = { familyId: validFamilyId }
     
     // USER só vê seus próprios compromissos
     // OWNER e SUPER_ADMIN vêem todos da família
@@ -46,6 +53,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
   const userId = (session.user as any)?.id
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
   try {
     const { title, description, date, time, status = 'scheduled', googleEventId } = await req.json()
     if (!title || !date) {
@@ -59,7 +71,7 @@ export async function POST(req: Request) {
         time,
         status,
         googleEventId,
-        familyId,
+        familyId: familyId as string,
         userId,
       },
       include: {
@@ -78,6 +90,13 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
   const userId = (session.user as any)?.id
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+
   try {
     const { id, title, description, date, time, status, googleEventId } = await req.json()
     
@@ -89,7 +108,7 @@ export async function PATCH(req: Request) {
     const existingCommitment = await prisma.commitment.findFirst({
       where: {
         id,
-        familyId,
+        familyId: validFamilyId,
       },
     })
 
@@ -129,6 +148,13 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
   const userId = (session.user as any)?.id
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+
   try {
     const { id } = await req.json()
     
@@ -140,7 +166,7 @@ export async function DELETE(req: Request) {
     const existingCommitment = await prisma.commitment.findFirst({
       where: {
         id,
-        familyId,
+        familyId: validFamilyId,
       },
     })
 
