@@ -177,8 +177,11 @@ async function verifyApp() {
         console.log(`  ✅ ${sub.family.name} - ${sub.plan.name}`)
         console.log(`     - Status: ${sub.status}`)
         console.log(`     - Início: ${sub.startDate.toLocaleDateString('pt-BR')}`)
-        if (sub.trialEndDate) {
-          console.log(`     - Trial até: ${sub.trialEndDate.toLocaleDateString('pt-BR')}`)
+        if (sub.endDate) {
+          console.log(`     - Fim: ${sub.endDate.toLocaleDateString('pt-BR')}`)
+        }
+        if (sub.asaasSubscriptionId) {
+          console.log(`     - Asaas ID: ${sub.asaasSubscriptionId}`)
         }
       })
     }
