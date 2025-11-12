@@ -321,6 +321,9 @@ class N8NService {
   }
 }
 
+// Exportar classe
+export { N8NService }
+
 // Exportar instância singleton
 export const n8nService = new N8NService()
 

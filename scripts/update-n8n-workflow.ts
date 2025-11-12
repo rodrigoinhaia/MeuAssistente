@@ -14,6 +14,22 @@ async function updateWorkflow() {
   try {
     const n8nService = new N8NService()
     
+    // Configurar serviço com variáveis de ambiente
+    const n8nUrl = process.env.N8N_BASE_URL || process.env.N8N_API_URL
+    const n8nApiKey = process.env.N8N_API_KEY
+    
+    if (!n8nUrl || !n8nApiKey) {
+      console.error('❌ Variáveis de ambiente não configuradas:')
+      console.error('   N8N_BASE_URL ou N8N_API_URL')
+      console.error('   N8N_API_KEY')
+      process.exit(1)
+    }
+    
+    n8nService.setConfig({
+      url: n8nUrl,
+      apiKey: n8nApiKey,
+    })
+    
     // Buscar workflow atual
     const workflow = await n8nService.getWorkflow(WORKFLOW_ID)
     
