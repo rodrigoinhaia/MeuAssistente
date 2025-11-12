@@ -63,9 +63,10 @@ O sistema agora possui:
 ## 🛠️ Como Executar
 
 ### Pré-requisitos
-- Node.js 18+
-- PostgreSQL
-- Docker (opcional)
+- Node.js 20+ (recomendado) ou 18+
+- PostgreSQL 16+ (ou compatível)
+- Docker (opcional, para containerização)
+- Git (para versionamento)
 
 ### Instalação
 
@@ -99,38 +100,82 @@ npm run dev
 ```
 
 ### Docker (Opcional)
+
+#### Desenvolvimento Local
 ```bash
 docker-compose up -d
 ```
 
+#### Build da Imagem
+```bash
+docker build -t meuassistente .
+```
+
+#### Executar Container
+```bash
+docker run -p 3000:3000 \
+  -e DATABASE_URL="postgresql://..." \
+  -e NEXTAUTH_SECRET="seu-secret" \
+  -e NEXTAUTH_URL="http://localhost:3000" \
+  meuassistente
+```
+
+### Deploy no EasyPanel
+
+O projeto inclui um **Dockerfile otimizado** para deploy no EasyPanel. Veja o guia completo em [EASYPANEL_SETUP.md](./EASYPANEL_SETUP.md).
+
+**Passos rápidos:**
+1. Conecte seu repositório Git no EasyPanel
+2. Configure as variáveis de ambiente (veja `EASYPANEL_SETUP.md`)
+3. Defina a porta: `3000`
+4. Faça o deploy
+5. Execute as migrations: `npx prisma migrate deploy`
+
+**Variáveis de ambiente obrigatórias:**
+- `DATABASE_URL` - String de conexão PostgreSQL
+- `NEXTAUTH_SECRET` - Secret para NextAuth
+- `NEXTAUTH_URL` - URL da aplicação
+- `NEXT_PUBLIC_APP_URL` - URL pública da aplicação
+
 ## 📁 Estrutura do Projeto
 
 ```
-src/
-├── app/
-│   ├── api/                    # API Routes
-│   │   ├── auth/              # Autenticação
-│   │   ├── users/             # Usuários
-│   │   ├── familys/           # familys
-│   │   ├── categories/        # Categorias
-│   │   ├── transactions/      # Transações
-│   │   └── ...
-│   ├── dashboard/             # Painel principal
-│   │   ├── layout.tsx         # Layout com menu dinâmico
-│   │   ├── page.tsx           # Dashboard
-│   │   ├── users/             # Gestão de usuários
-│   │   ├── plans/             # Gestão de planos (Admin)
-│   │   ├── subscriptions/     # Gestão de assinaturas (Admin)
-│   │   ├── payments/          # Gestão de pagamentos (Admin)
-│   │   ├── reports/           # Relatórios (Admin)
-│   │   ├── settings/          # Configurações (Admin)
-│   │   └── n8n/               # Monitoramento N8N (Admin)
-│   ├── login/                 # Página de login
-│   └── register/              # Página de registro
-├── lib/                       # Utilitários
-│   ├── db.ts                  # Configuração Prisma
-│   └── ...
-└── ...
+MeuAssistente/
+├── src/
+│   ├── app/
+│   │   ├── api/                    # API Routes
+│   │   │   ├── auth/              # Autenticação
+│   │   │   ├── users/             # Usuários
+│   │   │   ├── tenants/           # Famílias (Tenants)
+│   │   │   ├── categories/        # Categorias
+│   │   │   ├── transactions/      # Transações
+│   │   │   └── ...
+│   │   ├── dashboard/             # Painel principal
+│   │   │   ├── layout.tsx         # Layout com menu dinâmico
+│   │   │   ├── page.tsx           # Dashboard
+│   │   │   ├── users/             # Gestão de usuários
+│   │   │   ├── plans/             # Gestão de planos (Admin)
+│   │   │   ├── subscriptions/     # Gestão de assinaturas (Admin)
+│   │   │   ├── payments/          # Gestão de pagamentos (Admin)
+│   │   │   ├── reports/           # Relatórios (Admin)
+│   │   │   ├── settings/          # Configurações (Admin)
+│   │   │   └── n8n/               # Monitoramento N8N (Admin)
+│   │   ├── login/                 # Página de login
+│   │   └── register/              # Página de registro
+│   └── lib/                       # Utilitários
+│       ├── db.ts                  # Configuração Prisma
+│       └── ...
+├── prisma/
+│   ├── schema.prisma              # Schema do banco de dados
+│   └── seed.ts                    # Seed do banco
+├── public/                         # Arquivos estáticos
+├── scripts/                        # Scripts auxiliares
+│   └── docker-entrypoint.sh      # Script de inicialização Docker
+├── Dockerfile                      # Dockerfile para produção
+├── docker-compose.yml             # Docker Compose (desenvolvimento)
+├── .dockerignore                  # Arquivos ignorados no Docker
+├── EASYPANEL_SETUP.md             # Guia de deploy no EasyPanel
+└── README.md                       # Este arquivo
 ```
 
 ## 🔐 Contas de Teste
@@ -176,6 +221,25 @@ O sistema apresenta menus diferentes baseados no papel do usuário:
 - Configurações
 - Monitoramento N8N
 
+## 🐳 Docker e Deploy
+
+### Dockerfile
+O projeto inclui um Dockerfile multi-stage otimizado para produção:
+- **Build otimizado**: Multi-stage build reduz tamanho da imagem
+- **Segurança**: Executa com usuário não-root
+- **Prisma**: Geração automática do Prisma Client
+- **Standalone**: Next.js configurado para produção
+
+### EasyPanel
+Guia completo de deploy disponível em [EASYPANEL_SETUP.md](./EASYPANEL_SETUP.md).
+
+**Características:**
+- ✅ Dockerfile compatível com EasyPanel
+- ✅ Configuração de variáveis de ambiente
+- ✅ Health checks configurados
+- ✅ Suporte a migrations automáticas
+- ✅ Documentação completa
+
 ## 📊 Próximos Passos
 
 ### Prioridade Alta
@@ -187,6 +251,7 @@ O sistema apresenta menus diferentes baseados no papel do usuário:
 1. **Integrações Google**: Calendar e Tasks APIs
 2. **WhatsApp Business**: Configuração do número único
 3. **Testes Automatizados**: Cobertura de funcionalidades críticas
+4. **CI/CD**: Pipeline automatizado de deploy
 
 ## 🤝 Contribuição
 
