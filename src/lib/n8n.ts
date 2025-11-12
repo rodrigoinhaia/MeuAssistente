@@ -136,9 +136,9 @@ class N8NService {
   }
 
   /**
-   * Ativa ou desativa um workflow
+   * Atualiza um workflow completamente
    */
-  async toggleWorkflow(workflowId: string, active: boolean): Promise<N8NWorkflow> {
+  async updateWorkflow(workflowId: string, updates: Partial<N8NWorkflow>): Promise<N8NWorkflow> {
     if (!this.config) {
       throw new Error('N8N não configurado')
     }
@@ -157,7 +157,7 @@ class N8NService {
         },
         body: JSON.stringify({
           ...workflow,
-          active,
+          ...updates,
         }),
       })
 
@@ -171,6 +171,13 @@ class N8NService {
       console.error('Erro ao atualizar workflow do N8N:', error)
       throw error
     }
+  }
+
+  /**
+   * Ativa ou desativa um workflow
+   */
+  async toggleWorkflow(workflowId: string, active: boolean): Promise<N8NWorkflow> {
+    return this.updateWorkflow(workflowId, { active })
   }
 
   /**
