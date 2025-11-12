@@ -145,35 +145,36 @@ async function updateWorkflow() {
     const connections = workflow.connections || {}
     
     // Criar nova conexão: Edit Fields → Processar Mensagem
-    if (!connections[editFieldsNode.id]) {
-      connections[editFieldsNode.id] = {}
+    // N8N API espera conexões indexadas por nome do nó, não ID
+    if (!connections[editFieldsNode.name]) {
+      connections[editFieldsNode.name] = {}
     }
-    if (!connections[editFieldsNode.id].main) {
-      connections[editFieldsNode.id].main = []
+    if (!connections[editFieldsNode.name].main) {
+      connections[editFieldsNode.name].main = []
     }
-    if (!connections[editFieldsNode.id].main[0]) {
-      connections[editFieldsNode.id].main[0] = []
+    if (!connections[editFieldsNode.name].main[0]) {
+      connections[editFieldsNode.name].main[0] = []
     }
     
-    connections[editFieldsNode.id].main[0].push({
-      node: processMessageNode.id,
+    connections[editFieldsNode.name].main[0].push({
+      node: processMessageNode.name,
       type: 'main',
       index: 0,
     })
 
     // Criar conexão: Processar Mensagem → Verificar Confirmação
-    if (!connections[processMessageNode.id]) {
-      connections[processMessageNode.id] = {}
+    if (!connections[processMessageNode.name]) {
+      connections[processMessageNode.name] = {}
     }
-    if (!connections[processMessageNode.id].main) {
-      connections[processMessageNode.id].main = []
+    if (!connections[processMessageNode.name].main) {
+      connections[processMessageNode.name].main = []
     }
-    if (!connections[processMessageNode.id].main[0]) {
-      connections[processMessageNode.id].main[0] = []
+    if (!connections[processMessageNode.name].main[0]) {
+      connections[processMessageNode.name].main[0] = []
     }
     
-    connections[processMessageNode.id].main[0].push({
-      node: checkConfirmationNode.id,
+    connections[processMessageNode.name].main[0].push({
+      node: checkConfirmationNode.name,
       type: 'main',
       index: 0,
     })
@@ -195,10 +196,23 @@ async function updateWorkflow() {
     console.log('2. Ajustar a lógica de envio baseada em requiresConfirmation')
     console.log('3. Testar o fluxo completo')
   } catch (error) {
-    console.error('Erro ao atualizar workflow:', error)
+    console.error('❌ Erro ao atualizar workflow:', error)
+    throw error
   }
 }
 
 // Executar
-updateWorkflow()
+if (require.main === module) {
+  updateWorkflow()
+    .then(() => {
+      console.log('✨ Concluído!')
+      process.exit(0)
+    })
+    .catch((error) => {
+      console.error('💥 Erro fatal:', error)
+      process.exit(1)
+    })
+}
+
+export { updateWorkflow }
 
