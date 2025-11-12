@@ -10,6 +10,12 @@ export async function POST(req: Request) {
   }
   const userId = (session.user as any)?.id
   
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+  
   try {
     const { apiUrl, apiKey, instanceName } = await req.json()
     
@@ -112,7 +118,7 @@ export async function POST(req: Request) {
         const integration = await prisma.integration.upsert({
           where: {
             familyId_userId_provider: {
-              familyId,
+              familyId: validFamilyId,
               userId,
               provider: 'evolution_api',
             },
@@ -126,7 +132,7 @@ export async function POST(req: Request) {
             provider: 'evolution_api',
             accessToken: apiKey,
             scope,
-            familyId,
+            familyId: validFamilyId,
             userId,
             isActive: true,
           },
@@ -169,11 +175,17 @@ export async function GET(req: Request) {
   }
   const userId = (session.user as any)?.id
   
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+  
   try {
     const integration = await prisma.integration.findUnique({
       where: {
         familyId_userId_provider: {
-          familyId,
+          familyId: validFamilyId,
           userId,
           provider: 'evolution_api',
         },
@@ -276,13 +288,19 @@ export async function PATCH(req: Request) {
   }
   const userId = (session.user as any)?.id
   
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+  
   try {
     const { n8nWorkflowId } = await req.json()
     
     const integration = await prisma.integration.findUnique({
       where: {
         familyId_userId_provider: {
-          familyId,
+          familyId: validFamilyId,
           userId,
           provider: 'evolution_api',
         },
@@ -332,11 +350,17 @@ export async function DELETE(req: Request) {
   }
   const userId = (session.user as any)?.id
   
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+  
   try {
     const integration = await prisma.integration.findUnique({
       where: {
         familyId_userId_provider: {
-          familyId,
+          familyId: validFamilyId,
           userId,
           provider: 'evolution_api',
         },
@@ -365,7 +389,7 @@ export async function DELETE(req: Request) {
 
     await prisma.integration.deleteMany({
       where: {
-        familyId,
+        familyId: validFamilyId,
         userId,
         provider: 'evolution_api',
       },
