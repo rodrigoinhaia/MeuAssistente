@@ -2,12 +2,19 @@
 
 ## 📋 Variáveis Necessárias
 
-Você precisa configurar estas duas variáveis:
+Você precisa configurar estas variáveis:
 
+**Obrigatórias:**
 ```env
 NEXT_PUBLIC_APP_URL=https://seu-dominio.com
+```
+
+**Opcionais (mas recomendadas para produção):**
+```env
 WHATSAPP_WEBHOOK_SECRET=seu-secret-aqui
 ```
+
+> **Nota:** `WHATSAPP_WEBHOOK_SECRET` é opcional. Se não configurar, o webhook funcionará sem autenticação. Para produção, recomenda-se configurar para segurança.
 
 ## 🎯 Onde Configurar
 
