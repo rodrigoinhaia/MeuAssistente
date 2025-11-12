@@ -7,7 +7,7 @@ export const expenseJokes = [
   '💰 "O dinheiro não compra felicidade, mas compra coisas que fazem você feliz... como comida!" 😄',
   '💸 "Gastar dinheiro é fácil, difícil é ganhar de volta!" 😅',
   '🍔 "A melhor parte de gastar dinheiro é quando você esquece o que comprou!" 😂',
-  '💳 "Cartão de crédito: a ferramenta que transforma 'quero' em 'tenho' instantaneamente!" 🎯',
+  '💳 "Cartão de crédito: a ferramenta que transforma \'quero\' em \'tenho\' instantaneamente!" 🎯',
   '🛒 "Compras: o esporte onde você sempre ganha... e seu bolso sempre perde!" 🏆',
 ]
 
