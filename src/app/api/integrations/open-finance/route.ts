@@ -4,16 +4,35 @@ import { requireAuth } from '@/lib/authorization'
 
 // Listar instituições disponíveis (exemplo com Plugg.to ou similar)
 export async function GET(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, [])
-  if (error) {
-    return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
-  }
-  const userId = (session.user as any)?.id
-  
-  const { searchParams } = new URL(req.url)
-  const action = searchParams.get('action')
-
+  console.log('[OPEN_FINANCE_GET] Iniciando requisição')
   try {
+    const { session, role, familyId, error } = await requireAuth(req, [])
+    if (error) {
+      console.error('[OPEN_FINANCE_GET] Erro de autenticação:', error)
+      return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
+    }
+    
+    if (!session || !session.user) {
+      console.error('[OPEN_FINANCE_GET] Sessão inválida')
+      return NextResponse.json(
+        { status: 'error', message: 'Sessão inválida' },
+        { status: 401 }
+      )
+    }
+    
+    const userId = (session.user as any)?.id
+    
+    if (!familyId) {
+      console.error('[OPEN_FINANCE_GET] FamilyId não encontrado')
+      return NextResponse.json(
+        { status: 'error', message: 'FamilyId não encontrado na sessão' },
+        { status: 400 }
+      )
+    }
+    
+    const { searchParams } = new URL(req.url)
+    const action = searchParams.get('action')
+
     if (action === 'institutions') {
       // Retornar lista de instituições disponíveis via Open Finance
       // Em produção, isso viria de um provedor como Plugg.to, Belvo, etc.
@@ -30,20 +49,51 @@ export async function GET(req: Request) {
         { id: '756', name: 'Bancoob', code: '756' },
       ]
       
+      console.log('[OPEN_FINANCE_GET] Retornando instituições:', institutions.length)
       return NextResponse.json({ status: 'ok', institutions })
     }
 
     // Buscar conexões bancárias do usuário
-    const connections = await prisma.bankConnection.findMany({
-      where: { familyId, userId },
-      orderBy: { createdAt: 'desc' },
-    })
+    console.log('[OPEN_FINANCE_GET] Buscando conexões bancárias:', { familyId, userId })
+    
+    try {
+      const connections = await prisma.bankConnection.findMany({
+        where: { familyId, userId },
+        orderBy: { createdAt: 'desc' },
+      })
 
-    return NextResponse.json({ status: 'ok', connections })
-  } catch (error) {
-    console.error('[OPEN_FINANCE_GET]', error)
+      console.log('[OPEN_FINANCE_GET] Encontradas:', connections.length, 'conexões')
+      return NextResponse.json({ status: 'ok', connections })
+    } catch (prismaError: any) {
+      console.error('[OPEN_FINANCE_GET] Erro do Prisma:', {
+        message: prismaError?.message,
+        code: prismaError?.code,
+        meta: prismaError?.meta,
+      })
+      
+      // Se a tabela não existir, retornar array vazio
+      if (prismaError?.code === 'P2021' || prismaError?.message?.includes('does not exist')) {
+        console.warn('[OPEN_FINANCE_GET] Tabela não existe. Retornando array vazio.')
+        return NextResponse.json({ status: 'ok', connections: [] })
+      }
+      
+      throw prismaError
+    }
+  } catch (error: any) {
+    console.error('[OPEN_FINANCE_GET] Erro completo:', {
+      message: error?.message,
+      stack: error?.stack,
+    })
     return NextResponse.json(
-      { status: 'error', message: 'Erro ao buscar conexões', error: String(error) },
+      { 
+        status: 'error', 
+        message: 'Erro ao buscar conexões', 
+        error: error?.message || String(error),
+        details: process.env.NODE_ENV === 'development' ? {
+          code: error?.code,
+          meta: error?.meta,
+        } : undefined,
+      },
       { status: 500 }
     )
   }

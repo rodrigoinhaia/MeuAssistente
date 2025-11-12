@@ -22,6 +22,13 @@ export async function GET(req: Request) {
   try {
     // SUPER_ADMIN em modo família vê estatísticas da sua família (comporta-se como OWNER)
     // Outros roles só da sua família
+    if (!familyId) {
+      return NextResponse.json(
+        { status: 'error', message: 'FamilyId não encontrado na sessão' },
+        { status: 400 }
+      )
+    }
+
     const whereBase = { familyId }
     
     const today = new Date()
@@ -159,18 +166,22 @@ export async function GET(req: Request) {
     })
 
     // Saldo (receitas - despesas)
-    const income = Number(totalIncome._sum.amount || 0)
-    const expense = Number(totalExpense._sum.amount || 0)
+    // Converter Decimal para Number (Prisma retorna Decimal como string ou objeto)
+    const income = totalIncome._sum.amount ? Number(totalIncome._sum.amount) : 0
+    const expense = totalExpense._sum.amount ? Number(totalExpense._sum.amount) : 0
     const balance = income - expense
 
     // Calcular restante do mês (excluindo o que já foi pago/recebido hoje)
-    const receiveTodayAmount = Number(receiveToday._sum.amount || 0)
-    const receiveMonthAmount = Number(receiveMonth._sum.amount || 0)
+    const receiveTodayAmount = receiveToday._sum.amount ? Number(receiveToday._sum.amount) : 0
+    const receiveMonthAmount = receiveMonth._sum.amount ? Number(receiveMonth._sum.amount) : 0
     const receiveRemaining = receiveMonthAmount - receiveTodayAmount
 
-    const payTodayAmount = Number(payToday._sum.amount || 0)
-    const payMonthAmount = Number(payMonth._sum.amount || 0)
+    const payTodayAmount = payToday._sum.amount ? Number(payToday._sum.amount) : 0
+    const payMonthAmount = payMonth._sum.amount ? Number(payMonth._sum.amount) : 0
     const payRemaining = payMonthAmount - payTodayAmount
+
+    const overdueIncomeAmount = overdueIncome._sum.amount ? Number(overdueIncome._sum.amount) : 0
+    const overdueExpenseAmount = overdueExpense._sum.amount ? Number(overdueExpense._sum.amount) : 0
 
     return NextResponse.json({
       status: 'ok',
@@ -179,8 +190,8 @@ export async function GET(req: Request) {
         receiveRemaining: Number(receiveRemaining.toFixed(2)),
         payToday: Number(payTodayAmount.toFixed(2)),
         payRemaining: Number(payRemaining.toFixed(2)),
-        overdueIncome: Number((overdueIncome._sum.amount || 0).toFixed(2)),
-        overdueExpense: Number((overdueExpense._sum.amount || 0).toFixed(2)),
+        overdueIncome: Number(overdueIncomeAmount.toFixed(2)),
+        overdueExpense: Number(overdueExpenseAmount.toFixed(2)),
         totalIncome: Number(income.toFixed(2)),
         totalExpense: Number(expense.toFixed(2)),
         balance: Number(balance.toFixed(2)),

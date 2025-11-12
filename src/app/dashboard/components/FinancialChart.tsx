@@ -1,6 +1,6 @@
 "use client"
 
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, Line as RechartsLine } from 'recharts'
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, BarChart, Line as RechartsLine } from 'recharts'
 // Recebe prop opcional isDark para modo escuro
 
 interface Transaction {
@@ -18,11 +18,12 @@ interface FinancialChartProps {
   transactions: Transaction[]
   onlyPie?: boolean
   onlyLine?: boolean
+  chartType?: 'pie' | 'bar' | 'line' | 'composed'
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
+const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#6B7280']
 
-export default function FinancialChart({ transactions, onlyPie, onlyLine }: FinancialChartProps) {
+export default function FinancialChart({ transactions, onlyPie, onlyLine, chartType }: FinancialChartProps) {
   // Preparar dados para gráfico de pizza (despesas por categoria)
   const expenseData = transactions
     .filter(t => t.type === 'expense' && t.category)
@@ -38,6 +39,18 @@ export default function FinancialChart({ transactions, onlyPie, onlyLine }: Fina
       }
       return acc
     }, [] as Array<{ name: string; value: number; color: string }>)
+    .sort((a, b) => b.value - a.value) // Ordenar por valor decrescente
+    .map((item, index) => ({
+      ...item,
+      color: item.color || COLORS[index % COLORS.length],
+      percent: 0 // Será calculado depois
+    }))
+
+  // Calcular percentuais
+  const totalExpenses = expenseData.reduce((sum, item) => sum + item.value, 0)
+  expenseData.forEach(item => {
+    item.percent = totalExpenses > 0 ? (item.value / totalExpenses) * 100 : 0
+  })
 
   // Preparar dados para gráfico de linha (receitas vs despesas por mês)
   const monthlyData = transactions.reduce((acc, transaction) => {
@@ -74,27 +87,63 @@ export default function FinancialChart({ transactions, onlyPie, onlyLine }: Fina
 
   if (onlyPie) {
     return (
-      <div className="w-full flex justify-center">
+      <div className="w-full">
         {expenseData.length > 0 ? (
-          <ResponsiveContainer width={220} height={220}>
-            <PieChart>
-              <Pie
-                data={expenseData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {expenseData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="flex flex-col lg:flex-row items-center gap-6">
+            <ResponsiveContainer width="100%" height={280} className="max-w-[280px]">
+              <PieChart>
+                <Pie
+                  data={expenseData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={false}
+                  outerRadius={100}
+                  innerRadius={40}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {expenseData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: number, name: string, props: any) => [
+                    `R$ ${value.toFixed(2)}`,
+                    `${props.payload.percent.toFixed(1)}%`
+                  ]}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '8px'
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex-1 space-y-2">
+              <h4 className="text-sm font-semibold text-slate-700 mb-3">Categorias</h4>
+              {expenseData.map((entry, index) => (
+                <div key={index} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div 
+                      className="w-4 h-4 rounded flex-shrink-0" 
+                      style={{ backgroundColor: entry.color }}
+                    />
+                    <span className="text-sm text-slate-700 truncate font-medium">{entry.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-sm text-slate-600 font-semibold">
+                      {entry.percent.toFixed(1)}%
+                    </span>
+                    <span className="text-sm text-slate-500 w-20 text-right">
+                      R$ {entry.value.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-40 text-gray-500">
             Nenhuma despesa encontrada
@@ -105,37 +154,54 @@ export default function FinancialChart({ transactions, onlyPie, onlyLine }: Fina
   }
   if (onlyLine) {
     return (
-      <div className="w-full flex justify-center">
+      <div className="w-full">
         {monthlyData.length > 0 ? (
-          <ResponsiveContainer width={300} height={220}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis 
                 dataKey="month" 
                 tickFormatter={formatMonth}
                 angle={-45}
                 textAnchor="end"
                 height={80}
+                tick={{ fontSize: 12, fill: '#6b7280' }}
               />
-              <YAxis />
+              <YAxis 
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+              />
               <Tooltip 
-                formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '']}
                 labelFormatter={formatMonth}
+                contentStyle={{ 
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '8px'
+                }}
               />
-              <Legend />
+              <Legend 
+                wrapperStyle={{ paddingTop: '20px' }}
+                iconType="line"
+              />
               <Line 
                 type="monotone" 
                 dataKey="income" 
-                stroke="#00C49F" 
-                strokeWidth={2}
+                stroke="#10B981" 
+                strokeWidth={3}
                 name="Receitas"
+                dot={{ fill: '#10B981', r: 4 }}
+                activeDot={{ r: 6 }}
               />
               <Line 
                 type="monotone" 
                 dataKey="expense" 
-                stroke="#FF8042" 
-                strokeWidth={2}
+                stroke="#EF4444" 
+                strokeWidth={3}
                 name="Despesas"
+                dot={{ fill: '#EF4444', r: 4 }}
+                activeDot={{ r: 6 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -147,32 +213,172 @@ export default function FinancialChart({ transactions, onlyPie, onlyLine }: Fina
       </div>
     )
   }
-  // Default: ambos os gráficos
+  // Default: ambos os gráficos com opção de tipo
+  if (chartType === 'bar') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gráfico de Barras - Despesas por Categoria */}
+        <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg border border-slate-200/60 p-6">
+          <h3 className="text-lg font-semibold mb-4 text-slate-800">Despesas por Categoria</h3>
+          {expenseData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={expenseData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis type="number" tick={{ fontSize: 12, fill: '#6b7280' }} />
+                <YAxis 
+                  type="category" 
+                  dataKey="name" 
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  width={70}
+                />
+                <Tooltip 
+                  formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '8px'
+                  }}
+                />
+                <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                  {expenseData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              Nenhuma despesa encontrada
+            </div>
+          )}
+        </div>
+
+        {/* Gráfico de Linha - Receitas vs Despesas */}
+        <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg border border-slate-200/60 p-6">
+          <h3 className="text-lg font-semibold mb-4 text-slate-800">Receitas vs Despesas</h3>
+          {monthlyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="month" 
+                  tickFormatter={formatMonth}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '']}
+                  labelFormatter={formatMonth}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '8px'
+                  }}
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="line"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="income" 
+                  stroke="#10B981" 
+                  strokeWidth={3}
+                  name="Receitas"
+                  dot={{ fill: '#10B981', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="expense" 
+                  stroke="#EF4444" 
+                  strokeWidth={3}
+                  name="Despesas"
+                  dot={{ fill: '#EF4444', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              Nenhuma transação encontrada
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Default: Pizza + Linha
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Gráfico de Pizza - Despesas por Categoria */}
-      <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Despesas por Categoria</h3>
+      <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg border border-slate-200/60 p-6">
+        <h3 className="text-lg font-semibold mb-4 text-slate-800">Despesas por Categoria</h3>
         {expenseData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={expenseData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {expenseData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="flex flex-col lg:flex-row items-center gap-6">
+            <ResponsiveContainer width="100%" height={280} className="max-w-[280px]">
+              <PieChart>
+                <Pie
+                  data={expenseData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={false}
+                  outerRadius={100}
+                  innerRadius={40}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {expenseData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: number, name: string, props: any) => [
+                    `R$ ${value.toFixed(2)}`,
+                    `${props.payload.percent.toFixed(1)}%`
+                  ]}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '8px'
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex-1 space-y-2 w-full">
+              <h4 className="text-sm font-semibold text-slate-700 mb-3">Categorias</h4>
+              {expenseData.map((entry, index) => (
+                <div key={index} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div 
+                      className="w-4 h-4 rounded flex-shrink-0" 
+                      style={{ backgroundColor: entry.color }}
+                    />
+                    <span className="text-sm text-slate-700 truncate font-medium">{entry.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-sm text-slate-600 font-semibold">
+                      {entry.percent.toFixed(1)}%
+                    </span>
+                    <span className="text-sm text-slate-500 w-20 text-right">
+                      R$ {entry.value.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-64 text-gray-500">
             Nenhuma despesa encontrada
@@ -181,38 +387,55 @@ export default function FinancialChart({ transactions, onlyPie, onlyLine }: Fina
       </div>
 
       {/* Gráfico de Linha - Receitas vs Despesas */}
-      <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Receitas vs Despesas</h3>
+      <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg border border-slate-200/60 p-6">
+        <h3 className="text-lg font-semibold mb-4 text-slate-800">Receitas vs Despesas</h3>
         {monthlyData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
+            <LineChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis 
                 dataKey="month" 
                 tickFormatter={formatMonth}
                 angle={-45}
                 textAnchor="end"
                 height={80}
+                tick={{ fontSize: 12, fill: '#6b7280' }}
               />
-              <YAxis />
+              <YAxis 
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+              />
               <Tooltip 
-                formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '']}
                 labelFormatter={formatMonth}
+                contentStyle={{ 
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '8px'
+                }}
               />
-              <Legend />
+              <Legend 
+                wrapperStyle={{ paddingTop: '20px' }}
+                iconType="line"
+              />
               <Line 
                 type="monotone" 
                 dataKey="income" 
-                stroke="#00C49F" 
-                strokeWidth={2}
+                stroke="#10B981" 
+                strokeWidth={3}
                 name="Receitas"
+                dot={{ fill: '#10B981', r: 4 }}
+                activeDot={{ r: 6 }}
               />
               <Line 
                 type="monotone" 
                 dataKey="expense" 
-                stroke="#FF8042" 
-                strokeWidth={2}
+                stroke="#EF4444" 
+                strokeWidth={3}
                 name="Despesas"
+                dot={{ fill: '#EF4444', r: 4 }}
+                activeDot={{ r: 6 }}
               />
             </LineChart>
           </ResponsiveContainer>

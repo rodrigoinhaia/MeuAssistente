@@ -114,102 +114,166 @@ function TagCloud() {
 
 export default function Home() {
   return (
-    <main className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center overflow-x-hidden">
-      {/* Logo no canto superior esquerdo */}
-      <div className="fixed top-3 left-2 z-50 flex items-center md:top-6 md:left-8">
-        <span className="text-lg md:text-2xl font-extrabold text-blue-800 tracking-tight select-none">MeuAssistente</span>
-      </div>
-
-      {/* Botão de login fixo no canto superior direito */}
-      <div className="fixed top-3 right-2 z-50 md:top-6 md:right-8">
-        <Link href="/login">
-          <button className="px-4 py-2 md:px-6 md:py-2 bg-white border border-blue-700 text-blue-700 font-bold rounded-lg shadow hover:bg-blue-700 hover:text-white transition-all text-sm md:text-base">
-            Login
-          </button>
-        </Link>
-      </div>
+    <main className="relative min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30 flex flex-col items-center overflow-x-hidden">
+      {/* Header fixo */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/logo-icon.svg" alt="MeuAssistente" className="w-10 h-10" />
+            <span className="text-xl font-extrabold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent tracking-tight">
+              MeuAssistente
+            </span>
+          </div>
+          <Link href="/login">
+            <button className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-semibold rounded-xl shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 transition-all">
+              Entrar
+            </button>
+          </Link>
+        </div>
+      </header>
 
       {/* Fundo decorativo */}
-      <div className="absolute inset-0 pointer-events-none select-none">
-        <div className="absolute -top-32 -left-32 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-blue-200 opacity-30 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[200px] h-[200px] md:w-[400px] md:h-[400px] bg-purple-200 opacity-20 rounded-full blur-2xl" />
+      <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-gradient-to-br from-cyan-200/40 to-teal-200/40 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -right-40 w-[400px] h-[400px] bg-gradient-to-br from-emerald-200/30 to-teal-200/30 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 left-1/3 w-[600px] h-[600px] bg-gradient-to-br from-blue-100/20 to-cyan-100/20 rounded-full blur-3xl" />
       </div>
 
       {/* HERO */}
-      <section className="z-10 w-full max-w-2xl md:max-w-4xl px-4 md:px-6 pt-24 pb-10 text-center flex flex-col items-center">
-        <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-blue-900 mb-4 drop-shadow-lg">
-          Chega de esquecer contas ou perder o controle das suas finanças!
+      <section className="z-10 w-full max-w-6xl px-4 md:px-8 pt-32 pb-16 md:pt-40 md:pb-24 text-center flex flex-col items-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-50 to-emerald-50 border border-cyan-200/60 rounded-full mb-6 shadow-sm">
+          <span className="text-sm font-semibold bg-gradient-to-r from-cyan-600 to-emerald-600 bg-clip-text text-transparent">
+            🎁 3 dias grátis para testar
+          </span>
+        </div>
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight">
+          <span className="bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 bg-clip-text text-transparent">
+            Controle total
+          </span>
+          <br />
+          <span className="text-slate-800">das suas finanças</span>
+          <br />
+          <span className="text-slate-700">e compromissos</span>
         </h1>
-        <p className="text-base md:text-xl lg:text-2xl text-gray-700 mb-8 max-w-xl md:max-w-2xl mx-auto">
-          Tenha um <span className="font-bold text-blue-700">assistente pessoal 24h</span> que organiza sua vida financeira e compromissos direto no WhatsApp e no painel web.
+        <p className="text-lg md:text-xl lg:text-2xl text-slate-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+          Tenha um <span className="font-bold bg-gradient-to-r from-cyan-600 to-emerald-600 bg-clip-text text-transparent">assistente pessoal 24h</span> que organiza sua vida financeira e compromissos direto no <span className="font-semibold text-emerald-600">WhatsApp</span> e no <span className="font-semibold text-cyan-600">painel web</span>.
         </p>
-        <Link href="/register">
-          <button className="mt-2 px-6 py-3 md:px-8 md:py-3 bg-blue-700 text-white rounded-lg text-base md:text-lg font-bold shadow-lg hover:bg-blue-800 transition-all">
-            Quero experimentar grátis
-          </button>
-        </Link>
-        <div className="flex flex-wrap gap-2 md:gap-4 justify-center mt-8 mb-2">
-          <span className="bg-blue-100 text-blue-800 px-3 py-2 md:px-4 md:py-2 rounded-full font-semibold shadow text-xs md:text-base">Gestão Financeira Inteligente</span>
-          <span className="bg-purple-100 text-purple-800 px-3 py-2 md:px-4 md:py-2 rounded-full font-semibold shadow text-xs md:text-base">Compromissos & Agenda</span>
-          <span className="bg-green-100 text-green-800 px-3 py-2 md:px-4 md:py-2 rounded-full font-semibold shadow text-xs md:text-base">WhatsApp & IA</span>
-          <span className="bg-yellow-100 text-yellow-800 px-3 py-2 md:px-4 md:py-2 rounded-full font-semibold shadow text-xs md:text-base">Multitenancy</span>
-          <span className="bg-pink-100 text-pink-800 px-3 py-2 md:px-4 md:py-2 rounded-full font-semibold shadow text-xs md:text-base">Painel Web & Integração Google</span>
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-12">
+          <Link href="/register">
+            <button className="px-8 py-4 bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 text-white rounded-xl text-lg font-bold shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/40 transition-all transform hover:scale-105">
+              Começar grátis agora
+            </button>
+          </Link>
+          <Link href="/login">
+            <button className="px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-xl text-lg font-semibold hover:border-cyan-300 hover:text-cyan-600 transition-all">
+              Já tenho conta
+            </button>
+          </Link>
+        </div>
+        <div className="flex flex-wrap gap-3 justify-center max-w-4xl">
+          <span className="bg-white/80 backdrop-blur-sm border border-cyan-100 text-cyan-700 px-4 py-2 rounded-full font-semibold shadow-sm text-sm">💼 Gestão Financeira Inteligente</span>
+          <span className="bg-white/80 backdrop-blur-sm border border-teal-100 text-teal-700 px-4 py-2 rounded-full font-semibold shadow-sm text-sm">📅 Compromissos & Agenda</span>
+          <span className="bg-white/80 backdrop-blur-sm border border-emerald-100 text-emerald-700 px-4 py-2 rounded-full font-semibold shadow-sm text-sm">💬 WhatsApp & IA</span>
+          <span className="bg-white/80 backdrop-blur-sm border border-slate-200 text-slate-700 px-4 py-2 rounded-full font-semibold shadow-sm text-sm">👥 Multitenancy</span>
+          <span className="bg-white/80 backdrop-blur-sm border border-blue-100 text-blue-700 px-4 py-2 rounded-full font-semibold shadow-sm text-sm">🌐 Painel Web & Google</span>
         </div>
       </section>
 
       {/* COMO FUNCIONA */}
-      <section className="z-10 w-full max-w-2xl md:max-w-5xl px-4 md:px-6 py-10 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 flex flex-col items-center hover:scale-105 transition-transform">
-          <span className="text-3xl md:text-4xl mb-2">💬</span>
-          <h3 className="font-bold text-base md:text-lg mb-2 text-blue-800">1. Envie mensagem no WhatsApp</h3>
-          <p className="text-gray-600 text-xs md:text-sm text-center">Registre receitas, despesas e compromissos de forma simples, por texto ou áudio.</p>
+      <section className="z-10 w-full max-w-6xl px-4 md:px-8 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
+            Como funciona
+          </h2>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Simples, rápido e inteligente. Em 3 passos você tem controle total
+          </p>
         </div>
-        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 flex flex-col items-center hover:scale-105 transition-transform">
-          <span className="text-3xl md:text-4xl mb-2">🤖</span>
-          <h3 className="font-bold text-base md:text-lg mb-2 text-purple-800">2. IA organiza tudo pra você</h3>
-          <p className="text-gray-600 text-xs md:text-sm text-center">O sistema entende, categoriza e registra automaticamente, enviando lembretes e insights personalizados.</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 flex flex-col items-center hover:scale-105 transition-transform">
-          <span className="text-3xl md:text-4xl mb-2">📊</span>
-          <h3 className="font-bold text-base md:text-lg mb-2 text-green-800">3. Acompanhe no painel web</h3>
-          <p className="text-gray-600 text-xs md:text-sm text-center">Visualize relatórios, gráficos, compromissos e compartilhe o acesso com sua equipe ou família.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-8 flex flex-col items-center hover:shadow-xl hover:scale-105 transition-all group">
+            <div className="w-16 h-16 bg-gradient-to-br from-cyan-100 to-cyan-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <span className="text-3xl">💬</span>
+            </div>
+            <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-full flex items-center justify-center font-bold mb-4">
+              1
+            </div>
+            <h3 className="font-bold text-xl mb-3 text-slate-800">Envie mensagem no WhatsApp</h3>
+            <p className="text-slate-600 text-center leading-relaxed">
+              Registre receitas, despesas e compromissos de forma simples, por texto ou áudio. Natural como conversar com um amigo.
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-8 flex flex-col items-center hover:shadow-xl hover:scale-105 transition-all group">
+            <div className="w-16 h-16 bg-gradient-to-br from-teal-100 to-teal-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <span className="text-3xl">🤖</span>
+            </div>
+            <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-full flex items-center justify-center font-bold mb-4">
+              2
+            </div>
+            <h3 className="font-bold text-xl mb-3 text-slate-800">IA organiza tudo pra você</h3>
+            <p className="text-slate-600 text-center leading-relaxed">
+              O sistema entende, categoriza e registra automaticamente, enviando lembretes e insights personalizados em tempo real.
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-8 flex flex-col items-center hover:shadow-xl hover:scale-105 transition-all group">
+            <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <span className="text-3xl">📊</span>
+            </div>
+            <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full flex items-center justify-center font-bold mb-4">
+              3
+            </div>
+            <h3 className="font-bold text-xl mb-3 text-slate-800">Acompanhe no painel web</h3>
+            <p className="text-slate-600 text-center leading-relaxed">
+              Visualize relatórios, gráficos, compromissos e compartilhe o acesso com sua equipe ou família.
+            </p>
+          </div>
         </div>
       </section>
 
       {/* BENEFÍCIOS E DIFERENCIAIS */}
-      <section className="z-10 w-full max-w-2xl md:max-w-4xl px-4 md:px-6 py-8 text-center">
-        <h2 className="text-xl md:text-2xl font-bold text-blue-900 mb-2">Por que escolher o MeuAssistente?</h2>
-        <ul className="flex flex-wrap justify-center gap-2 md:gap-4 text-gray-700 text-xs md:text-base mb-6">
-          <li className="bg-blue-50 px-3 py-2 md:px-4 md:py-2 rounded shadow">🔒 Segurança de dados e privacidade</li>
-          <li className="bg-blue-50 px-3 py-2 md:px-4 md:py-2 rounded shadow">🤖 IA com 99,9% de precisão</li>
-          <li className="bg-blue-50 px-3 py-2 md:px-4 md:py-2 rounded shadow">🌎 Multitenancy: ideal para empresas e equipes</li>
-          <li className="bg-blue-50 px-3 py-2 md:px-4 md:py-2 rounded shadow">📱 WhatsApp, painel web e integração Google</li>
-          <li className="bg-blue-50 px-3 py-2 md:px-4 md:py-2 rounded shadow">⏰ Lembretes automáticos e relatórios inteligentes</li>
-          <li className="bg-blue-50 px-3 py-2 md:px-4 md:py-2 rounded shadow">👨‍👩‍👧‍👦 Compartilhamento fácil com família ou empresa</li>
-        </ul>
+      <section className="z-10 w-full max-w-6xl px-4 md:px-8 py-16 bg-gradient-to-br from-slate-50 to-cyan-50/30 rounded-3xl border border-slate-200/60 shadow-lg">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
+            Por que escolher o MeuAssistente?
+          </h2>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Tudo que você precisa para ter controle total da sua vida financeira
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { icon: '🔒', title: 'Segurança de dados', desc: 'Criptografia de ponta a ponta e privacidade garantida' },
+            { icon: '🤖', title: 'IA com 99,9% de precisão', desc: 'Tecnologia de ponta para máxima confiabilidade' },
+            { icon: '🌎', title: 'Multitenancy', desc: 'Ideal para empresas e equipes de qualquer tamanho' },
+            { icon: '📱', title: 'Multiplataforma', desc: 'WhatsApp, painel web e integração Google' },
+            { icon: '⏰', title: 'Lembretes automáticos', desc: 'Nunca mais esqueça um compromisso ou conta' },
+            { icon: '👨‍👩‍👧‍👦', title: 'Compartilhamento fácil', desc: 'Compartilhe com família ou empresa de forma segura' },
+          ].map((item, i) => (
+            <div key={i} className="bg-white rounded-xl p-6 border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
+              <div className="text-3xl mb-3">{item.icon}</div>
+              <h3 className="font-bold text-lg text-slate-800 mb-2">{item.title}</h3>
+              <p className="text-slate-600 text-sm">{item.desc}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* ESTATÍSTICAS */}
-      <section className="z-10 w-full max-w-2xl md:max-w-5xl px-4 md:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 text-center">
-        <div className="bg-white rounded-xl shadow p-4 md:p-6 flex flex-col items-center">
-          <span className="text-2xl md:text-3xl mb-2">📈</span>
-          <div className="text-lg md:text-2xl font-bold text-blue-800">+150 mil</div>
-          <div className="text-gray-600 text-xs md:text-sm">Registros processados</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4 md:p-6 flex flex-col items-center">
-          <span className="text-2xl md:text-3xl mb-2">💰</span>
-          <div className="text-lg md:text-2xl font-bold text-green-700">+163 milhões</div>
-          <div className="text-gray-600 text-xs md:text-sm">Em finanças organizadas</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4 md:p-6 flex flex-col items-center">
-          <span className="text-2xl md:text-3xl mb-2">⏰</span>
-          <div className="text-lg md:text-2xl font-bold text-purple-700">+87 mil</div>
-          <div className="text-gray-600 text-xs md:text-sm">Compromissos lembrados</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4 md:p-6 flex flex-col items-center">
-          <span className="text-2xl md:text-3xl mb-2">🤖</span>
-          <div className="text-lg md:text-2xl font-bold text-blue-700">99,9%</div>
-          <div className="text-gray-600 text-xs md:text-sm">Precisão da IA</div>
+      <section className="z-10 w-full max-w-6xl px-4 md:px-8 py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            { icon: '📈', value: '+150 mil', label: 'Registros processados', color: 'from-cyan-500 to-cyan-600' },
+            { icon: '💰', value: '+163 milhões', label: 'Em finanças organizadas', color: 'from-emerald-500 to-emerald-600' },
+            { icon: '⏰', value: '+87 mil', label: 'Compromissos lembrados', color: 'from-teal-500 to-teal-600' },
+            { icon: '🤖', value: '99,9%', label: 'Precisão da IA', color: 'from-cyan-500 to-emerald-500' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6 flex flex-col items-center hover:shadow-xl transition-all">
+              <div className="text-4xl mb-4">{stat.icon}</div>
+              <div className={`text-2xl md:text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2`}>
+                {stat.value}
+              </div>
+              <div className="text-slate-600 text-sm text-center font-medium">{stat.label}</div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -228,43 +292,79 @@ export default function Home() {
       **/}
 
       {/* DEPOIMENTOS */}
-      <section className="z-10 w-full max-w-2xl md:max-w-4xl px-4 md:px-6 py-8">
-        <h2 className="text-xl md:text-2xl font-bold text-blue-900 mb-6 text-center">Clientes que transformaram sua rotina</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <section className="z-10 w-full max-w-6xl px-4 md:px-8 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
+            Clientes que transformaram sua rotina
+          </h2>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Veja o que nossos usuários estão dizendo
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((t, i) => (
-            <div key={i} className="bg-white rounded-xl shadow-lg p-4 md:p-6 flex flex-col items-center">
-              <span className="text-yellow-400 text-lg md:text-xl mb-2">{'★'.repeat(t.rating)}</span>
-              <p className="text-gray-700 italic mb-4 text-sm md:text-base">“{t.text}”</p>
-              <div className="text-xs md:text-sm text-gray-500 font-semibold">{t.name}</div>
-              <div className="text-xs text-gray-400">{t.date}</div>
+            <div key={i} className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-8 flex flex-col hover:shadow-xl transition-all">
+              <div className="flex gap-1 mb-4">
+                {Array.from({ length: t.rating }).map((_, idx) => (
+                  <span key={idx} className="text-yellow-400 text-xl">★</span>
+                ))}
+              </div>
+              <p className="text-slate-700 italic mb-6 text-base leading-relaxed flex-grow">"{t.text}"</p>
+              <div className="border-t border-slate-200 pt-4">
+                <div className="text-sm font-semibold text-slate-800">{t.name}</div>
+                <div className="text-xs text-slate-500 mt-1">{t.date}</div>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="z-10 w-full max-w-xl md:max-w-3xl px-4 md:px-6 py-8">
-        <h2 className="text-xl md:text-2xl font-bold text-blue-900 mb-6 text-center">Perguntas frequentes</h2>
+      <section className="z-10 w-full max-w-4xl px-4 md:px-8 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
+            Perguntas frequentes
+          </h2>
+          <p className="text-lg text-slate-600">
+            Tire suas dúvidas sobre o MeuAssistente
+          </p>
+        </div>
         <div className="space-y-4">
           {faqs.map((faq, i) => (
-            <details key={i} className="bg-white rounded-lg shadow p-4">
-              <summary className="font-semibold cursor-pointer text-blue-800 text-sm md:text-base">{faq.q}</summary>
-              <p className="text-gray-600 mt-2 text-xs md:text-sm">{faq.a}</p>
+            <details key={i} className="bg-white rounded-xl shadow-md border border-slate-200/60 p-6 hover:shadow-lg transition-all group">
+              <summary className="font-semibold cursor-pointer text-slate-800 text-base md:text-lg group-open:text-cyan-600 transition-colors list-none flex items-center justify-between">
+                <span>{faq.q}</span>
+                <span className="text-cyan-500 ml-4 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <p className="text-slate-600 mt-4 text-sm md:text-base leading-relaxed pl-0">{faq.a}</p>
             </details>
           ))}
         </div>
       </section>
 
       {/* CTA FINAL */}
-      <section className="z-10 w-full max-w-md md:max-w-2xl px-4 md:px-6 py-10 text-center">
-        <h2 className="text-2xl md:text-3xl font-extrabold text-blue-900 mb-4">Pronto para transformar sua vida financeira?</h2>
-        <p className="text-base md:text-lg text-gray-700 mb-6">Experimente o MeuAssistente gratuitamente e descubra como é fácil ter controle total das suas finanças e compromissos!</p>
-        <Link href="/register">
-          <button className="px-8 py-3 md:px-10 md:py-4 bg-blue-700 text-white rounded-lg text-lg md:text-xl font-bold shadow-lg hover:bg-blue-800 transition-all">
-            Quero meu assistente agora
-          </button>
-        </Link>
-        <p className="text-gray-400 text-xs mt-4">Status: Em desenvolvimento • Versão: 0.1.0</p>
+      <section className="z-10 w-full max-w-4xl px-4 md:px-8 py-20 text-center">
+        <div className="bg-gradient-to-br from-cyan-500 via-teal-500 to-emerald-500 rounded-3xl p-12 md:p-16 shadow-2xl shadow-cyan-500/30">
+          <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
+            Pronto para transformar sua vida financeira?
+          </h2>
+          <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+            Experimente o MeuAssistente gratuitamente e descubra como é fácil ter controle total das suas finanças e compromissos!
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+            <Link href="/register">
+              <button className="px-10 py-4 bg-white text-cyan-600 rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all">
+                Começar grátis agora
+              </button>
+            </Link>
+            <Link href="/login">
+              <button className="px-10 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white rounded-xl text-lg font-semibold hover:bg-white/20 transition-all">
+                Já tenho conta
+              </button>
+            </Link>
+          </div>
+        </div>
+        <p className="text-slate-400 text-sm mt-8">Status: Em desenvolvimento • Versão: 0.1.0</p>
       </section>
 
     </main>

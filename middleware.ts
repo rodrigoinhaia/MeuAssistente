@@ -22,6 +22,7 @@ export async function middleware(req: NextRequest) {
     '/register',
     '/_next',
     '/favicon.ico',
+    '/icon.svg',
     '/api/auth', // Garantir que está incluído
   ]
 
@@ -111,8 +112,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - icon.svg (icon file)
      * - public folder files
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

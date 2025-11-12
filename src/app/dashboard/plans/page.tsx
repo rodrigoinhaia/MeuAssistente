@@ -29,6 +29,8 @@ const defaultNewPlan: Plan = {
 
 export default function PlansPage() {
   const { data: session, status } = useSession()
+  const { isAdminMode, isSuperAdmin } = useAdminContext()
+  const userRole = (session?.user as any)?.role
   const [plans, setPlans] = useState<Plan[]>([])
   const [editPlan, setEditPlan] = useState<Plan | null>(null)
   const [error, setError] = useState('')
@@ -36,8 +38,21 @@ export default function PlansPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchPlans()
-  }, [])
+    // Apenas SUPER_ADMIN em modo admin pode ver esta página
+    if (status === 'authenticated') {
+      // Verifica diretamente o localStorage para garantir que está atualizado
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('admin_context') : null
+      const currentContext = (stored === 'admin' || stored === 'family') ? stored : 'family'
+      const isInAdminMode = currentContext === 'admin'
+      
+      if (isSuperAdmin && isInAdminMode) {
+        fetchPlans()
+      } else {
+        setError('Você precisa estar no modo Admin para ver esta página. Altere para o modo Admin no menu lateral.')
+        setLoading(false)
+      }
+    }
+  }, [status, isAdminMode, isSuperAdmin])
 
   async function fetchPlans() {
     try {
@@ -56,22 +71,19 @@ export default function PlansPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+      <div className="p-8 flex items-center justify-center h-64">
+        <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-lg" />
       </div>
     )
   }
 
-  const userRole = (session?.user as any)?.role
-  const { isAdminMode } = useAdminContext()
-  
-  // Apenas SUPER_ADMIN em modo admin pode gerenciar planos
-  if (!session || !session.user || userRole !== 'SUPER_ADMIN' || !isAdminMode) {
+  // Se não estiver no modo admin, mostrar mensagem de erro
+  if (error && !isSuperAdmin && !isAdminMode) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200/60 text-center">
-          <p className="text-xl font-semibold text-slate-800">Acesso restrito.</p>
-          <p className="text-sm text-slate-600 mt-2">Apenas Super Admins no modo Admin podem gerenciar planos.</p>
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700 shadow-sm">
+          <p className="font-semibold">Acesso restrito.</p>
+          <p className="text-sm mt-1">{error}</p>
         </div>
       </div>
     )
@@ -154,97 +166,120 @@ export default function PlansPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-          Gestão de Planos
-        </h1>
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
+            Gestão de Planos
+          </h1>
+          <p className="text-slate-600 mt-1">Gerencie os planos de assinatura disponíveis no sistema</p>
+        </div>
         <button
           onClick={() => setEditPlan({ ...defaultNewPlan })}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white hover:from-cyan-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-cyan-500/20 transition-all"
+          className="px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium"
         >
-          Novo Plano
+          + Novo Plano
         </button>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-sm">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400">
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 shadow-sm">
           {success}
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {plans.map((plan) => (
-          <div
-            key={plan.id}
-            className={`relative bg-gray-900/50 backdrop-blur-sm rounded-2xl border ${
-              plan.id === 'premium'
-                ? 'border-cyan-500/50'
-                : plan.id === 'enterprise'
-                ? 'border-purple-500/50'
-                : 'border-gray-800'
-            } overflow-hidden hover:border-opacity-100 transition-colors`}
-          >
-            {/* Gradiente de fundo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {plans.map((plan) => {
+          const isPremium = plan.name.toLowerCase().includes('premium')
+          const isEnterprise = plan.name.toLowerCase().includes('enterprise')
+          
+          return (
             <div
-              className={`absolute inset-0 opacity-[0.03] ${
-                plan.id === 'premium'
-                  ? 'bg-gradient-to-br from-cyan-400 to-emerald-400'
-                  : plan.id === 'enterprise'
-                  ? 'bg-gradient-to-br from-purple-400 to-pink-400'
-                  : ''
+              key={plan.id}
+              className={`relative bg-white border rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all ${
+                isPremium
+                  ? 'border-cyan-200/60'
+                  : isEnterprise
+                  ? 'border-purple-200/60'
+                  : 'border-slate-200/60'
               }`}
-            />
+            >
+              {/* Badge de destaque */}
+              {isPremium && (
+                <div className="absolute top-4 right-4 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-md">
+                  Popular
+                </div>
+              )}
+              {isEnterprise && (
+                <div className="absolute top-4 right-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-md">
+                  Premium
+                </div>
+              )}
 
-            {/* Conteúdo */}
-            <div className="relative p-6">
-              <div className="text-center mb-6">
-                <h3 className={`text-xl font-bold ${
-                  plan.name.toLowerCase().includes('premium')
-                    ? 'bg-gradient-to-r from-cyan-400 to-emerald-400'
-                    : plan.name.toLowerCase().includes('enterprise')
-                    ? 'bg-gradient-to-r from-purple-400 to-pink-400'
-                    : 'text-white'
-                } ${!plan.name.toLowerCase().includes('básico') ? 'bg-clip-text text-transparent' : ''}`}>
+              {/* Header com gradiente */}
+              <div className={`p-6 ${
+                isPremium
+                  ? 'bg-gradient-to-r from-cyan-50 to-emerald-50'
+                  : isEnterprise
+                  ? 'bg-gradient-to-r from-purple-50 to-pink-50'
+                  : 'bg-gradient-to-r from-slate-50 to-slate-100'
+              }`}>
+                <h3 className={`text-2xl font-bold mb-2 ${
+                  isPremium
+                    ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent'
+                    : isEnterprise
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent'
+                    : 'text-slate-800'
+                }`}>
                   {plan.name}
                 </h3>
-                <p className="text-gray-300 text-sm mt-2">{plan.description}</p>
+                <p className="text-slate-600 text-sm">{plan.description}</p>
                 <div className="mt-4">
-                  <span className={`text-4xl font-bold ${
-                    plan.name.toLowerCase().includes('premium')
-                      ? 'bg-gradient-to-r from-cyan-400 to-emerald-400'
-                      : plan.name.toLowerCase().includes('enterprise')
-                      ? 'bg-gradient-to-r from-purple-400 to-pink-400'
-                      : 'text-white'
-                  } ${!plan.name.toLowerCase().includes('básico') ? 'bg-clip-text text-transparent' : ''}`}>
-                    R$ {Number(plan.price).toFixed(2)}
-                  </span>
-                  <span className="text-gray-300">/mês</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className={`text-4xl font-bold ${
+                      isPremium
+                        ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent'
+                        : isEnterprise
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent'
+                        : 'text-slate-800'
+                    }`}>
+                      R$ {Number(plan.price).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-slate-500 text-sm">/mês</span>
+                  </div>
                 </div>
-                <div className="mt-2 flex justify-center gap-4 text-sm">
-                  <div className="text-gray-300">
+                <div className="mt-4 flex justify-center gap-4 text-sm text-slate-600">
+                  <div className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
                     <span className="font-medium">{plan.maxUsers}</span> usuários
                   </div>
-                  <div className="text-gray-300">
-                    <span className="font-medium">{plan.maxStorage}GB</span> armazenamento
+                  <div className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                    </svg>
+                    <span className="font-medium">{plan.maxStorage}GB</span>
                   </div>
                 </div>
               </div>
               
-              <div className="space-y-3 mb-8">
+              {/* Features */}
+              <div className="p-6 space-y-3">
+                <div className="text-sm font-semibold text-slate-700 mb-4">Recursos incluídos:</div>
                 {plan.features.filter(f => f.trim() !== '').map((feature, index) => (
-                  <div key={index} className="flex items-center text-sm group">
+                  <div key={index} className="flex items-start gap-3">
                     <svg
-                      className={`w-5 h-5 mr-2 ${
-                        plan.name.toLowerCase().includes('premium')
-                          ? 'text-cyan-400 group-hover:text-emerald-400'
-                          : plan.name.toLowerCase().includes('enterprise')
-                          ? 'text-purple-400 group-hover:text-pink-400'
-                          : 'text-emerald-400'
-                      } transition-colors duration-300`}
+                      className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                        isPremium
+                          ? 'text-cyan-500'
+                          : isEnterprise
+                          ? 'text-purple-500'
+                          : 'text-emerald-500'
+                      }`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -256,119 +291,132 @@ export default function PlansPage() {
                         d="M5 13l4 4L19 7"
                       />
                     </svg>
-                    <span className="text-gray-300 group-hover:text-white transition-colors duration-300">
-                      {feature}
-                    </span>
+                    <span className="text-slate-700 text-sm flex-1">{feature}</span>
                   </div>
                 ))}
               </div>
               
-              <div className="flex gap-3">
+              {/* Footer com ações */}
+              <div className="p-6 pt-0 flex gap-3">
                 <button
                   onClick={() => setEditPlan(plan)}
-                  className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
-                    plan.id === 'premium'
-                      ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-cyan-500/20 text-white'
-                      : plan.id === 'enterprise'
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 hover:shadow-lg hover:shadow-purple-500/20 text-white'
-                      : 'bg-white/5 hover:bg-white/10 text-gray-200'
+                  className={`flex-1 py-2.5 px-4 rounded-xl transition-all font-medium ${
+                    isPremium
+                      ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-white hover:shadow-lg hover:shadow-cyan-500/30'
+                      : isEnterprise
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/30'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => handleStatusChange(plan)}
-                  className={`flex-1 py-2 px-4 rounded-lg border transition-all duration-300 ${
+                  className={`px-4 py-2.5 rounded-xl border transition-all font-medium ${
                     plan.isActive
-                      ? 'border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-500'
-                      : 'border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500'
+                      ? 'border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300'
+                      : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300'
                   }`}
                 >
                   {plan.isActive ? 'Desativar' : 'Ativar'}
                 </button>
               </div>
+
+              {/* Status badge */}
+              <div className={`absolute top-4 left-4 px-2 py-1 rounded-full text-xs font-semibold ${
+                plan.isActive
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-red-100 text-red-700'
+              }`}>
+                {plan.isActive ? 'Ativo' : 'Inativo'}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Modal de edição */}
       {editPlan && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form
             onSubmit={handleEditSubmit}
-            className="bg-gray-900/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md border border-gray-800 space-y-6"
+            className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60 space-y-6 max-h-[90vh] overflow-y-auto"
           >
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-              Editar Plano
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
+              {editPlan.id ? 'Editar Plano' : 'Novo Plano'}
             </h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Nome</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Nome</label>
                 <input
                   name="name"
                   value={editPlan.name}
                   onChange={e => setEditPlan({ ...editPlan, name: e.target.value })}
-                  className="w-full bg-white/5 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="Ex: Básico, Premium, Enterprise"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Descrição</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Descrição</label>
                 <textarea
                   name="description"
                   value={editPlan.description}
                   onChange={e => setEditPlan({ ...editPlan, description: e.target.value })}
-                  className="w-full bg-white/5 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all resize-none"
                   rows={3}
+                  placeholder="Descreva os benefícios do plano"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Preço (R$)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Preço (R$)</label>
                 <input
                   name="price"
                   type="number"
                   step="0.01"
                   min="0"
                   value={editPlan.price}
-                  onChange={e => setEditPlan({ ...editPlan, price: parseFloat(e.target.value) })}
-                  className="w-full bg-white/5 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                  onChange={e => setEditPlan({ ...editPlan, price: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="0.00"
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Limite de Usuários</label>
-                <input
-                  name="maxUsers"
-                  type="number"
-                  min="1"
-                  value={editPlan.maxUsers}
-                  onChange={e => setEditPlan({ ...editPlan, maxUsers: parseInt(e.target.value) })}
-                  className="w-full bg-white/5 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Limite de Usuários</label>
+                  <input
+                    name="maxUsers"
+                    type="number"
+                    min="1"
+                    value={editPlan.maxUsers}
+                    onChange={e => setEditPlan({ ...editPlan, maxUsers: parseInt(e.target.value) || 1 })}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Armazenamento (GB)</label>
+                  <input
+                    name="maxStorage"
+                    type="number"
+                    min="1"
+                    value={editPlan.maxStorage}
+                    onChange={e => setEditPlan({ ...editPlan, maxStorage: parseInt(e.target.value) || 1 })}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                    required
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Armazenamento (GB)</label>
-                <input
-                  name="maxStorage"
-                  type="number"
-                  min="1"
-                  value={editPlan.maxStorage}
-                  onChange={e => setEditPlan({ ...editPlan, maxStorage: parseInt(e.target.value) })}
-                  className="w-full bg-white/5 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Recursos</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Recursos</label>
                 <div className="space-y-2">
                   {editPlan.features.map((feature, index) => (
                     <div key={index} className="flex gap-2">
@@ -379,7 +427,8 @@ export default function PlansPage() {
                           newFeatures[index] = e.target.value
                           setEditPlan({ ...editPlan, features: newFeatures })
                         }}
-                        className="flex-1 bg-white/5 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all text-sm"
+                        className="flex-1 bg-slate-50 border border-slate-200 text-slate-800 px-4 py-2 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
+                        placeholder="Ex: Suporte 24/7, API ilimitada"
                       />
                       <button
                         type="button"
@@ -388,7 +437,7 @@ export default function PlansPage() {
                           newFeatures.splice(index, 1)
                           setEditPlan({ ...editPlan, features: newFeatures })
                         }}
-                        className="px-3 py-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors"
                       >
                         ×
                       </button>
@@ -400,7 +449,7 @@ export default function PlansPage() {
                       ...editPlan, 
                       features: [...editPlan.features, ''] 
                     })}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 transition-colors text-sm"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 hover:border-slate-300 transition-colors text-sm font-medium"
                   >
                     + Adicionar Recurso
                   </button>
@@ -408,29 +457,29 @@ export default function PlansPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-8">
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setEditPlan(null)}
-                className="px-4 py-2 rounded-lg border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 hover:bg-white/5 transition-all"
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-white hover:from-cyan-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-cyan-500/20 transition-all"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium"
               >
-                Salvar alterações
+                {editPlan.id ? 'Salvar alterações' : 'Criar plano'}
               </button>
             </div>
 
             {error && (
-              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                 {error}
               </div>
             )}
             {success && (
-              <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm">
+              <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm">
                 {success}
               </div>
             )}

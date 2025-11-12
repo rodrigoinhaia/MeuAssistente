@@ -50,19 +50,23 @@ export default function LoginPage() {
       {/* Lado Esquerdo - Área de Marketing */}
       <div className="md:w-1/2 p-8 flex flex-col justify-center items-center">
         <div className="max-w-2xl">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
-            MeuAssistente
-          </h1>
+          <div className="flex items-center gap-4 mb-6">
+            <img src="/logo-icon.svg" alt="MeuAssistente" className="w-16 h-16" />
+            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
+              MeuAssistente
+            </h1>
+          </div>
           <h2 className="text-2xl md:text-3xl mb-6 text-slate-800 font-semibold">
-            ERP feito para seu negócio ser integrado
+            O assistente de IA para sua família! <br />
+            Gerencie sua vida financeira e compromissos direto no WhatsApp e no painel web.
           </h2>
-          <div className="grid grid-cols-3 gap-4 mt-8">
+          {/* <div className="grid grid-cols-3 gap-4 mt-8">
             {['amazon', 'mercadolivre', 'magalu', 'shopify'].map((platform) => (
               <div key={platform} className="bg-white border border-slate-200/60 p-3 rounded-xl flex items-center justify-center h-16 shadow-sm hover:shadow-md transition-all">
                 <span className="text-slate-600 text-sm font-medium">{platform}</span>
               </div>
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
 

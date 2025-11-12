@@ -25,7 +25,8 @@ export function getAdminContext(userRole: string | undefined): AdminContext {
   }
   
   const stored = localStorage.getItem(CONTEXT_KEY)
-  return (stored === 'admin' || stored === 'family') ? stored : 'family'
+  const context = (stored === 'admin' || stored === 'family') ? stored : 'family'
+  return context
 }
 
 /**

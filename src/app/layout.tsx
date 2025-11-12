@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'MeuAssistente - Sistema de Gestão Financeira e Compromissos',
   description: 'Sistema multitenancy de assistente financeiro e de compromissos com agentes de IA',
+  icons: {
+    icon: '/icon.svg',
+  },
 }
 
 export default function RootLayout({

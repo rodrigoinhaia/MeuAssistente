@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useRouter, useParams } from 'next/navigation'
+import { useAdminContext } from '@/hooks/useAdminContext'
+import apiClient from '@/lib/axios-config'
 
 interface Family {
   id: string
@@ -49,9 +50,11 @@ const planLabels: Record<string, string> = {
 
 export default function FamilyDetailsPage() {
   const { data: session, status } = useSession()
+  const { isAdminMode, isSuperAdmin } = useAdminContext()
   const router = useRouter()
   const params = useParams()
   const familyId = params.id as string
+  const userRole = (session?.user as any)?.role
 
   const [family, setFamily] = useState<Family | null>(null)
   const [users, setUsers] = useState<User[]>([])
@@ -62,34 +65,64 @@ export default function FamilyDetailsPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (familyId) fetchAll()
-    // eslint-disable-next-line
-  }, [familyId])
+    // Apenas SUPER_ADMIN em modo admin pode ver detalhes de outras famílias
+    if (status === 'authenticated' && familyId) {
+      if (isSuperAdmin && isAdminMode) {
+        fetchAll()
+      } else {
+        setError('Você precisa estar no modo Admin para ver esta página. Altere para o modo Admin no menu lateral.')
+        setLoading(false)
+      }
+    }
+  }, [status, familyId, isAdminMode, isSuperAdmin])
 
   async function fetchAll() {
     setLoading(true)
     setError('')
     try {
-      const [familyRes, usersRes, usageRes, subsRes, logsRes] = await Promise.all([
-        axios.get(`/api/tenants/${familyId}`),
-        axios.get(`/api/tenants/${familyId}/users`),
-        axios.get(`/api/tenants/${familyId}/usage`),
-        axios.get(`/api/tenants/${familyId}/subscriptions`),
-        axios.get(`/api/tenants/${familyId}/logs`),
+      const results = await Promise.allSettled([
+        apiClient.get(`/tenants/${familyId}`),
+        apiClient.get(`/tenants/${familyId}/users`),
+        apiClient.get(`/tenants/${familyId}/usage`),
+        apiClient.get(`/tenants/${familyId}/subscriptions`),
+        apiClient.get(`/tenants/${familyId}/logs`),
       ])
-      setFamily(familyRes.data.family)
-      setUsers(usersRes.data.users)
-      setUsage(usageRes.data.usage)
-      setSubscriptions(subsRes.data.subscriptions)
-      setLogs(logsRes.data.logs)
+
+      const familyRes = results[0].status === 'fulfilled' ? results[0].value : null
+      const usersRes = results[1].status === 'fulfilled' ? results[1].value : null
+      const usageRes = results[2].status === 'fulfilled' ? results[2].value : null
+      const subsRes = results[3].status === 'fulfilled' ? results[3].value : null
+      const logsRes = results[4].status === 'fulfilled' ? results[4].value : null
+
+      if (familyRes?.data?.status === 'ok') {
+        setFamily(familyRes.data.family)
+      } else {
+        setError(familyRes?.data?.message || 'Erro ao carregar dados da família')
+      }
+
+      if (usersRes?.data?.status === 'ok') {
+        setUsers(usersRes.data.users || [])
+      }
+
+      if (usageRes?.data?.status === 'ok') {
+        setUsage(usageRes.data.usage || null)
+      }
+
+      if (subsRes?.data?.status === 'ok') {
+        setSubscriptions(subsRes.data.subscriptions || [])
+      }
+
+      if (logsRes?.data?.status === 'ok') {
+        setLogs(logsRes.data.logs || [])
+      }
     } catch (err: any) {
-      setError('Erro ao carregar dados da família')
+      setError(err?.response?.data?.message || 'Erro ao carregar dados da família')
     }
     setLoading(false)
   }
 
   if (status === 'loading') return <div>Carregando sessão...</div>
-  if (!session || !session.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) return <div>Acesso restrito.</div>
+  if (!session) return <div>Você precisa estar autenticado.</div>
 
   if (loading) return <div>Carregando dados da família...</div>
   if (error) return <div className="text-red-600">{error}</div>

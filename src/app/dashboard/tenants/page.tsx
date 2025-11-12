@@ -32,6 +32,13 @@ export default function FamiliesPage() {
   const [filter, setFilter] = useState('')
 
   async function fetchFamilies() {
+    // Verificar se está no modo admin antes de fazer a requisição
+    if (!isAdminMode || userRole !== 'SUPER_ADMIN') {
+      setError('Você precisa estar no modo Admin para ver esta página. Altere para o modo Admin no menu lateral.')
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError('')
     try {
@@ -42,20 +49,46 @@ export default function FamiliesPage() {
         setError(res.data.message || 'Erro ao carregar famílias')
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao carregar famílias')
+      const errorMessage = err.response?.data?.message || 'Erro ao carregar famílias'
+      // Não logar como erro se for apenas questão de permissão
+      if (err.response?.status === 403) {
+        setError('Você precisa estar no modo Admin para ver esta página. Altere para o modo Admin no menu lateral.')
+      } else {
+        console.error('[TENANTS_PAGE] Erro ao buscar famílias:', errorMessage)
+        setError(errorMessage)
+      }
     }
     setLoading(false)
   }
 
   useEffect(() => {
     // Apenas SUPER_ADMIN em modo admin pode ver esta página
-    if (status === 'authenticated' && userRole === 'SUPER_ADMIN' && isAdminMode) {
-      fetchFamilies()
+    if (status === 'authenticated' && userRole === 'SUPER_ADMIN') {
+      // Verifica diretamente o localStorage para garantir que está atualizado
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('admin_context') : null
+      const currentContext = (stored === 'admin' || stored === 'family') ? stored : 'family'
+      const isInAdminMode = currentContext === 'admin'
+      
+      if (isInAdminMode) {
+        fetchFamilies()
+      } else {
+        setError('Você precisa estar no modo Admin para ver esta página. Altere para o modo Admin no menu lateral.')
+        setLoading(false)
+      }
+    } else if (status === 'authenticated' && userRole !== 'SUPER_ADMIN') {
+      setError('Acesso restrito. Apenas Super Admins podem acessar esta página.')
+      setLoading(false)
     }
   }, [status, session, isAdminMode, userRole])
 
 
   async function handleStatusChange(id: string, isActive: boolean) {
+    // Verificar se está no modo admin antes de fazer a requisição
+    if (!isAdminMode || userRole !== 'SUPER_ADMIN') {
+      setError('Você precisa estar no modo Admin para realizar esta ação.')
+      return
+    }
+
     setError('')
     setSuccess('')
     try {
@@ -67,12 +100,23 @@ export default function FamiliesPage() {
         setError(res.data.message || 'Erro ao atualizar status')
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao atualizar status')
+      if (err.response?.status === 403) {
+        setError('Você precisa estar no modo Admin para realizar esta ação.')
+      } else {
+        setError(err.response?.data?.message || 'Erro ao atualizar status')
+      }
     }
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault()
+    
+    // Verificar se está no modo admin antes de fazer a requisição
+    if (!isAdminMode || userRole !== 'SUPER_ADMIN') {
+      setError('Você precisa estar no modo Admin para realizar esta ação.')
+      return
+    }
+
     setError('')
     setSuccess('')
     if (!editFamily) return
@@ -86,7 +130,11 @@ export default function FamiliesPage() {
         setError(res.data.message || 'Erro ao atualizar família')
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao atualizar família')
+      if (err.response?.status === 403) {
+        setError('Você precisa estar no modo Admin para realizar esta ação.')
+      } else {
+        setError(err.response?.data?.message || 'Erro ao atualizar família')
+      }
     }
   }
 

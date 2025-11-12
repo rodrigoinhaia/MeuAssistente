@@ -35,9 +35,20 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { session, role, familyId, error } = await requireAuth(req, [])
+  // Apenas OWNER e SUPER_ADMIN podem criar categorias
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
+  }
+  
+  // SUPER_ADMIN em modo admin NÃO pode criar categorias (apenas configurações globais)
+  if (role === 'SUPER_ADMIN' && context === 'admin') {
+    return NextResponse.json(
+      { status: 'error', message: 'Acesso negado. Categorias são dados familiares e não estão disponíveis no modo Admin.' },
+      { status: 403 }
+    )
   }
   
   try {
@@ -46,11 +57,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: 'error', message: 'Nome e tipo são obrigatórios.' }, { status: 400 })
     }
     
-    // SUPER_ADMIN pode criar categoria para qualquer família (deve especificar no body)
-    // Outros roles só podem criar para sua própria família
-    const finalFamilyId = role === 'SUPER_ADMIN' 
+    // SUPER_ADMIN em modo família pode criar categoria para qualquer família (deve especificar no body)
+    // OWNER só pode criar para sua própria família
+    const finalFamilyId = (role === 'SUPER_ADMIN' && context === 'family')
       ? (bodyFamilyId || familyId) // SUPER_ADMIN pode especificar familyId no body, senão usa da sessão
-      : familyId // Outros roles sempre usam familyId da sessão
+      : familyId // OWNER sempre usa familyId da sessão
     
     if (!finalFamilyId) {
       return NextResponse.json({ status: 'error', message: 'familyId é obrigatório.' }, { status: 400 })

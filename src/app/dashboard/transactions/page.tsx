@@ -105,7 +105,11 @@ export default function TransactionsPage() {
       if (filter.status) params.status = filter.status
       
       const res = await apiClient.get('/transactions', { params })
-      setTransactions(res.data.transactions || [])
+      if (res.data.status === 'ok') {
+        setTransactions(res.data.transactions || [])
+      } else {
+        setError(res.data.message || res.data.error || 'Erro ao carregar transações')
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao carregar transações')
     }

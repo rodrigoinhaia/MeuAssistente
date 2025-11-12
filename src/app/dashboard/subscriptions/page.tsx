@@ -69,7 +69,7 @@ const statusColors: Record<string, string> = {
 
 export default function SubscriptionsPage() {
   const { data: session, status } = useSession()
-  const { isAdminMode } = useAdminContext()
+  const { isAdminMode, isSuperAdmin } = useAdminContext()
   const userRole = (session?.user as any)?.role
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(true)

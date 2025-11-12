@@ -38,6 +38,26 @@ export default function SettingsPage() {
   const { data: session, status } = useSession()
   const currentUserRole = (session?.user as any)?.role
   
+  // Verificar se é SUPER_ADMIN
+  useEffect(() => {
+    if (status === 'authenticated' && currentUserRole !== 'SUPER_ADMIN') {
+      // Redirecionar para dashboard se não for SUPER_ADMIN
+      window.location.href = '/dashboard'
+    }
+  }, [status, currentUserRole])
+  
+  // Se não for SUPER_ADMIN, não renderizar nada
+  if (status === 'authenticated' && currentUserRole !== 'SUPER_ADMIN') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Acesso Negado</h2>
+          <p className="text-slate-600">Apenas Super Admins podem acessar as configurações do sistema.</p>
+        </div>
+      </div>
+    )
+  }
+  
   const [settings, setSettings] = useState<SystemSettings>({
     companyName: 'MeuAssistente',
     supportEmail: 'suporte@meuassistente.com',

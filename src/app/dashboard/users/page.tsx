@@ -56,9 +56,19 @@ export default function UsersPage() {
     setError('')
     try {
       const res = await apiClient.get('/users')
-      setUsers(res.data.users || [])
+      if (res.data.status === 'ok') {
+        setUsers(res.data.users || [])
+      } else {
+        setError(res.data.error || res.data.message || 'Erro ao carregar usuários')
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao carregar usuários')
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Erro ao carregar usuários'
+      setError(errorMessage)
+      console.error('[USERS_PAGE] Erro ao buscar usuários:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      })
     }
     setLoading(false)
   }

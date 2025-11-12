@@ -6,9 +6,20 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { session, role, familyId, error } = await requireAuth(req, [])
+  // Apenas OWNER e SUPER_ADMIN podem editar categorias
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
+  }
+  
+  // SUPER_ADMIN em modo admin NÃO pode editar categorias (apenas configurações globais)
+  if (role === 'SUPER_ADMIN' && context === 'admin') {
+    return NextResponse.json(
+      { status: 'error', message: 'Acesso negado. Categorias são dados familiares e não estão disponíveis no modo Admin.' },
+      { status: 403 }
+    )
   }
 
   try {
@@ -63,9 +74,20 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { session, role, familyId, error } = await requireAuth(req, [])
+  // Apenas OWNER e SUPER_ADMIN podem excluir categorias
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  const { session, role, familyId, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
+  }
+  
+  // SUPER_ADMIN em modo admin NÃO pode excluir categorias (apenas configurações globais)
+  if (role === 'SUPER_ADMIN' && context === 'admin') {
+    return NextResponse.json(
+      { status: 'error', message: 'Acesso negado. Categorias são dados familiares e não estão disponíveis no modo Admin.' },
+      { status: 403 }
+    )
   }
 
   try {

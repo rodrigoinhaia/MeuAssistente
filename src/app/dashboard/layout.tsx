@@ -12,7 +12,39 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  // TODOS OS HOOKS DEVEM SER CHAMADOS NO TOPO, ANTES DE QUALQUER RETURN
   const { data: session, status } = useSession()
+  const [trialStatus, setTrialStatus] = useState<any>(null)
+  const [checkingTrial, setCheckingTrial] = useState(true)
+  const router = useRouter()
+
+  // Verificar se a sessão tem os dados necessários
+  const userRole = (session?.user as any)?.role
+  const familyId = (session?.user as any)?.familyId
+
+  // Verificar status do trial (apenas para OWNER, não para SUPER_ADMIN)
+  useEffect(() => {
+    if (userRole === 'OWNER' && familyId) {
+      async function checkTrial() {
+        try {
+          const res = await apiClient.get(`/subscriptions/check-trial`)
+          setTrialStatus(res.data)
+          
+          // Se trial expirou e não está ativo, redirecionar para upgrade
+          if (res.data.trialExpired && !res.data.isActive) {
+            router.push('/dashboard/upgrade')
+          }
+        } catch (err) {
+          console.error('Erro ao verificar trial:', err)
+        } finally {
+          setCheckingTrial(false)
+        }
+      }
+      checkTrial()
+    } else {
+      setCheckingTrial(false)
+    }
+  }, [userRole, familyId, router])
 
   if (status === 'loading') {
     return (
@@ -34,10 +66,6 @@ export default function DashboardLayout({
       </div>
     )
   }
-
-  // Verificar se a sessão tem os dados necessários
-  const userRole = (session.user as any)?.role
-  const familyId = (session.user as any)?.familyId
   
   // SUPER_ADMIN pode não ter familyId se estiver em modo admin, mas precisa ter família própria
   if (!userRole) {
@@ -77,34 +105,6 @@ export default function DashboardLayout({
       </div>
     )
   }
-
-  // Verificar status do trial (apenas para OWNER, não para SUPER_ADMIN)
-  const [trialStatus, setTrialStatus] = useState<any>(null)
-  const [checkingTrial, setCheckingTrial] = useState(true)
-  const router = useRouter()
-
-  useEffect(() => {
-    if (userRole === 'OWNER' && familyId) {
-      async function checkTrial() {
-        try {
-          const res = await apiClient.get(`/subscriptions/check-trial`)
-          setTrialStatus(res.data)
-          
-          // Se trial expirou e não está ativo, redirecionar para upgrade
-          if (res.data.trialExpired && !res.data.isActive) {
-            router.push('/dashboard/upgrade')
-          }
-        } catch (err) {
-          console.error('Erro ao verificar trial:', err)
-        } finally {
-          setCheckingTrial(false)
-        }
-      }
-      checkTrial()
-    } else {
-      setCheckingTrial(false)
-    }
-  }, [userRole, familyId, router])
 
   if (checkingTrial) {
     return (

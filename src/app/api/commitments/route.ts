@@ -9,12 +9,20 @@ export async function GET(req: Request) {
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
+  const userId = (session.user as any)?.id
   const { searchParams } = new URL(req.url)
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const status = searchParams.get('status')
   try {
     const where: any = { familyId }
+    
+    // USER só vê seus próprios compromissos
+    // OWNER e SUPER_ADMIN vêem todos da família
+    if (role === 'USER') {
+      where.userId = userId
+    }
+    
     if (startDate && endDate) {
       where.date = { gte: new Date(startDate), lte: new Date(endDate) }
     }

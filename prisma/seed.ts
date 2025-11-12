@@ -72,6 +72,57 @@ async function main() {
   })
   console.log(`Created USER user: ${commonUser.email}`)
 
+  // 3.5. Criar categorias padrão para a família do OWNER
+  const defaultExpenseCategories = [
+    { name: 'Alimentação', color: '#EF4444', icon: '🍔' },
+    { name: 'Transporte', color: '#3B82F6', icon: '🚗' },
+    { name: 'Moradia', color: '#8B5CF6', icon: '🏠' },
+    { name: 'Saúde', color: '#10B981', icon: '🏥' },
+    { name: 'Educação', color: '#F59E0B', icon: '📚' },
+    { name: 'Lazer', color: '#EC4899', icon: '🎬' },
+    { name: 'Roupas', color: '#6366F1', icon: '👕' },
+    { name: 'Contas', color: '#14B8A6', icon: '💡' },
+    { name: 'Compras', color: '#F97316', icon: '🛒' },
+    { name: 'Outros', color: '#6B7280', icon: '📦' },
+  ]
+
+  const defaultIncomeCategories = [
+    { name: 'Salário', color: '#10B981', icon: '💰' },
+    { name: 'Freelance', color: '#3B82F6', icon: '💼' },
+    { name: 'Investimentos', color: '#8B5CF6', icon: '📈' },
+    { name: 'Vendas', color: '#F59E0B', icon: '🛍️' },
+    { name: 'Presentes', color: '#EC4899', icon: '🎁' },
+    { name: 'Outros', color: '#6B7280', icon: '📦' },
+  ]
+
+  for (const category of defaultExpenseCategories) {
+    await prisma.category.create({
+      data: {
+        familyId: ownerFamily.id,
+        name: category.name,
+        type: 'expense',
+        color: category.color,
+        icon: category.icon,
+        isActive: true,
+      },
+    })
+  }
+  console.log(`Created ${defaultExpenseCategories.length} expense categories`)
+
+  for (const category of defaultIncomeCategories) {
+    await prisma.category.create({
+      data: {
+        familyId: ownerFamily.id,
+        name: category.name,
+        type: 'income',
+        color: category.color,
+        icon: category.icon,
+        isActive: true,
+      },
+    })
+  }
+  console.log(`Created ${defaultIncomeCategories.length} income categories`)
+
   // 4. Criar Planos
   await prisma.plan.deleteMany() // Limpa planos existentes
 

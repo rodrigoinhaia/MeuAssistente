@@ -20,7 +20,6 @@ import {
   RiDeleteBinLine,
   RiGoogleFill,
   RiRefreshLine,
-  RiSyncLine,
   RiSearchLine,
   RiFilterLine,
   RiUserLine
@@ -366,7 +365,7 @@ export default function CommitmentsPage() {
                 className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all font-medium flex items-center gap-2 shadow-sm disabled:opacity-50"
                 title="Sincronizar para Google Calendar"
               >
-                <RiSyncLine className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                <RiRefreshLine className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Sincronizar</span>
               </button>
               <button

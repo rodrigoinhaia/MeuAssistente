@@ -9,12 +9,20 @@ export async function GET(req: Request) {
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
+  const userId = (session.user as any)?.id
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
   const priority = searchParams.get('priority')
   const dueDate = searchParams.get('dueDate')
   try {
     const where: any = { familyId }
+    
+    // USER só vê suas próprias tarefas
+    // OWNER e SUPER_ADMIN vêem todas da família
+    if (role === 'USER') {
+      where.userId = userId
+    }
+    
     if (status) where.status = status
     if (priority) where.priority = priority
     if (dueDate) {

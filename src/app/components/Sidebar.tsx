@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -16,7 +15,8 @@ import {
   RiHomeLine,
   RiAdminLine
 } from 'react-icons/ri'
-import { getAdminContext, setAdminContext, type AdminContext } from '@/lib/context'
+import { useAdminContext } from '@/hooks/useAdminContext'
+import { useSession } from 'next-auth/react'
 
 // Interface para as props do Sidebar
 interface SidebarProps {
@@ -32,7 +32,7 @@ const familyMenuItems = [
   { href: '/dashboard/commitments', icon: RiFileChartLine, label: 'Compromissos' },
   { href: '/dashboard/tasks', icon: RiFileListLine, label: 'Tarefas' },
   { href: '/dashboard/integrations', icon: RiRadarLine, label: 'Integrações' },
-  { href: '/dashboard/settings', icon: RiSettings4Line, label: 'Configurações' },
+  { href: '/dashboard/settings', icon: RiSettings4Line, label: 'Configurações', roles: ['SUPER_ADMIN'] },
 ]
 
 // Definição dos itens do menu - Modo Super Admin
@@ -49,42 +49,57 @@ const adminMenuItems = [
 
 export default function Sidebar({ userRole }: SidebarProps) {
   const pathname = usePathname()
-  const [adminContext, setAdminContextState] = useState<AdminContext>('family')
+  const { data: session } = useSession()
+  const { isAdminMode, isSuperAdmin, setContext } = useAdminContext()
+  
+  // Usa userRole da prop ou da sessão
+  const currentUserRole = userRole || (session?.user as any)?.role
 
-  useEffect(() => {
-    if (userRole === 'SUPER_ADMIN') {
-      setAdminContextState(getAdminContext(userRole))
+  const handleContextChange = (newContext: 'family' | 'admin') => {
+    // Salva diretamente no localStorage primeiro
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('admin_context', newContext)
     }
-  }, [userRole])
-
-  const handleContextChange = (newContext: AdminContext) => {
-    setAdminContext(newContext)
-    setAdminContextState(newContext)
-    // Recarregar a página para aplicar o novo contexto
-    window.location.href = '/dashboard'
+    setContext(newContext)
+    // Dispara evento para atualizar outros componentes
+    window.dispatchEvent(new Event('adminContextChanged'))
+    // Pequeno delay para garantir que tudo foi atualizado antes de recarregar
+    setTimeout(() => {
+      window.location.href = '/dashboard'
+    }, 150)
   }
 
   // Determina qual menu mostrar
-  const isSuperAdmin = userRole === 'SUPER_ADMIN'
-  const isAdminMode = isSuperAdmin && adminContext === 'admin'
   const menuItems = isAdminMode ? adminMenuItems : familyMenuItems
 
   // Filtra os itens do menu com base no userRole
+  // No modo admin, todos os itens são mostrados (não há filtro por roles)
   const filteredMenuItems = menuItems.filter(item => {
+    // Se está no modo admin, mostra todos os itens (adminMenuItems não têm roles)
+    if (isAdminMode) {
+      return true
+    }
+    
+    // No modo família, aplica filtro por roles
     if (!item.roles) return true
-    if (isSuperAdmin && adminContext === 'family') {
+    
+    if (isSuperAdmin) {
       // SUPER_ADMIN em modo família pode acessar tudo que OWNER pode
       return item.roles.includes('OWNER') || item.roles.includes('SUPER_ADMIN')
     }
-    return userRole && item.roles.includes(userRole)
+    
+    return currentUserRole && item.roles.includes(currentUserRole)
   })
 
   return (
     <aside className="w-64 min-h-screen bg-gradient-to-b from-slate-50 to-white border-r border-slate-200/60 flex flex-col shadow-lg">
       <div className="flex items-center h-16 px-6 border-b border-slate-200/60 bg-white/50 backdrop-blur-sm">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
-          MeuAssistente
-        </h1>
+        <div className="flex items-center gap-2">
+          <img src="/logo-icon.svg" alt="MeuAssistente" className="w-8 h-8" />
+          <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
+            MeuAssistente
+          </h1>
+        </div>
       </div>
 
       {/* Seletor de Contexto para SUPER_ADMIN */}
@@ -98,7 +113,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
               <button
                 onClick={() => handleContextChange('family')}
                 className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  adminContext === 'family'
+                  !isAdminMode
                     ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-md shadow-cyan-500/20 scale-105'
                     : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-sm hover:shadow-md'
                 }`}
@@ -109,7 +124,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
               <button
                 onClick={() => handleContextChange('admin')}
                 className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  adminContext === 'admin'
+                  isAdminMode
                     ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md shadow-purple-500/20 scale-105'
                     : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-sm hover:shadow-md'
                 }`}

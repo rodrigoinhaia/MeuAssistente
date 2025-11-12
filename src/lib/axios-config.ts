@@ -16,10 +16,10 @@ apiClient.interceptors.request.use(
   (config) => {
     // Tenta pegar o contexto do localStorage (client-side)
     if (typeof window !== 'undefined') {
-      const context = getAdminContext(undefined) // Passa undefined para pegar do localStorage
-      if (context === 'admin' || context === 'family') {
-        config.headers['x-admin-context'] = context
-      }
+      // Lê diretamente do localStorage para garantir que está atualizado
+      const stored = localStorage.getItem('admin_context')
+      const context = (stored === 'admin' || stored === 'family') ? stored : 'family'
+      config.headers['x-admin-context'] = context
     }
     return config
   },

@@ -36,17 +36,15 @@ export async function GET(req: Request) {
   const contextHeader = req.headers.get('x-admin-context')
   const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
   
-  const { session, role, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
+  const { session, role, error, adminContext: context } = await requireAuth(req, ['SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
 
-  // OWNER e SUPER_ADMIN podem ver configurações
-  // SUPER_ADMIN em modo admin vê configurações globais
-  // OWNER vê configurações (por enquanto globais, futuramente por família)
-  if (role !== 'OWNER' && role !== 'SUPER_ADMIN') {
+  // Apenas SUPER_ADMIN pode ver configurações do sistema
+  if (role !== 'SUPER_ADMIN') {
     return NextResponse.json(
-      { status: 'error', message: 'Acesso negado. Apenas Owners e Super Admins podem ver configurações.' },
+      { status: 'error', message: 'Acesso negado. Apenas Super Admins podem ver configurações do sistema.' },
       { status: 403 }
     )
   }
@@ -82,17 +80,15 @@ export async function PUT(req: Request) {
   const contextHeader = req.headers.get('x-admin-context')
   const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
   
-  const { session, role, error, adminContext: context } = await requireAuth(req, ['OWNER', 'SUPER_ADMIN'], adminContext)
+  const { session, role, error, adminContext: context } = await requireAuth(req, ['SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
 
-  // OWNER e SUPER_ADMIN podem alterar configurações
-  // SUPER_ADMIN em modo admin altera configurações globais
-  // OWNER altera configurações (por enquanto globais, futuramente por família)
-  if (role !== 'OWNER' && role !== 'SUPER_ADMIN') {
+  // Apenas SUPER_ADMIN pode alterar configurações do sistema
+  if (role !== 'SUPER_ADMIN') {
     return NextResponse.json(
-      { status: 'error', message: 'Acesso negado. Apenas Owners e Super Admins podem alterar configurações.' },
+      { status: 'error', message: 'Acesso negado. Apenas Super Admins podem alterar configurações do sistema.' },
       { status: 403 }
     )
   }

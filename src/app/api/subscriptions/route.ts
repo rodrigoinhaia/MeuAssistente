@@ -1,32 +1,25 @@
-import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '../auth/[...nextauth]/authOptions'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/authorization'
 import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return Response.json({ error: 'Não autorizado' }, { status: 401 })
-    }
-
-    const userRole = (session.user as any)?.role
-    const userFamilyId = (session.user as any)?.familyId
     const contextHeader = request.headers.get('x-admin-context')
     const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+    
+    const authResult = await requireAuth(request, ['SUPER_ADMIN', 'OWNER'], adminContext)
+    
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status })
+    }
+
+    const { role, familyId, adminContext: context } = authResult
 
     // SUPER_ADMIN em modo admin pode ver todas as assinaturas
     // SUPER_ADMIN em modo família e OWNER só da sua família
-    if (userRole === 'SUPER_ADMIN' && adminContext === 'admin') {
-      // Pode ver todas
-    } else if (userRole !== 'OWNER' && !(userRole === 'SUPER_ADMIN' && adminContext === 'family')) {
-      return Response.json({ error: 'Não autorizado' }, { status: 403 })
-    }
-
-    // Busca assinaturas usando Prisma (seguro contra SQL injection)
-    const whereClause = (userRole === 'SUPER_ADMIN' && adminContext === 'admin') 
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
       ? {} 
-      : { familyId: userFamilyId }
+      : { familyId }
     
     const subscriptions = await prisma.subscription.findMany({
       where: whereClause,
@@ -64,32 +57,25 @@ export async function GET(request: NextRequest) {
       asaasSubscriptionId: sub.asaasSubscriptionId,
     }))
 
-    return Response.json({ subscriptions: formattedSubscriptions })
+    return NextResponse.json({ subscriptions: formattedSubscriptions })
   } catch (error: any) {
     console.error('[SUBSCRIPTION_GET]', error)
-    return Response.json({ error: 'Erro ao buscar assinaturas' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao buscar assinaturas' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return Response.json({ error: 'Não autorizado' }, { status: 401 })
-    }
-
-    const userRole = (session.user as any)?.role
-    const userFamilyId = (session.user as any)?.familyId
     const contextHeader = request.headers.get('x-admin-context')
     const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
-
-    // SUPER_ADMIN em modo admin pode editar qualquer assinatura
-    // SUPER_ADMIN em modo família e OWNER só da sua família
-    if (userRole === 'SUPER_ADMIN' && adminContext === 'admin') {
-      // Pode editar qualquer
-    } else if (userRole !== 'OWNER' && !(userRole === 'SUPER_ADMIN' && adminContext === 'family')) {
-      return Response.json({ error: 'Não autorizado' }, { status: 403 })
+    
+    const authResult = await requireAuth(request, ['SUPER_ADMIN', 'OWNER'], adminContext)
+    
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status })
     }
+
+    const { role, familyId, adminContext: context } = authResult
 
     const data = await request.json()
     const { id, status } = data
@@ -101,15 +87,15 @@ export async function PATCH(request: NextRequest) {
     })
 
     if (!subscriptionToUpdate) {
-      return Response.json({ error: 'Assinatura não encontrada' }, { status: 404 })
+      return NextResponse.json({ error: 'Assinatura não encontrada' }, { status: 404 })
     }
 
     // SUPER_ADMIN em modo admin pode editar qualquer assinatura
     // SUPER_ADMIN em modo família e outros roles só da sua família
-    if (userRole === 'SUPER_ADMIN' && adminContext === 'admin') {
+    if (role === 'SUPER_ADMIN' && context === 'admin') {
       // Pode editar qualquer
-    } else if (subscriptionToUpdate.familyId !== userFamilyId) {
-      return Response.json({ error: 'Não autorizado para editar esta assinatura' }, { status: 403 })
+    } else if (subscriptionToUpdate.familyId !== familyId) {
+      return NextResponse.json({ error: 'Não autorizado para editar esta assinatura' }, { status: 403 })
     }
 
     // Atualiza o status da assinatura usando Prisma
@@ -147,9 +133,9 @@ export async function PATCH(request: NextRequest) {
       asaasSubscriptionId: updatedSubscription.asaasSubscriptionId,
     }
 
-    return Response.json({ subscription: formattedSubscription })
+    return NextResponse.json({ subscription: formattedSubscription })
   } catch (error: any) {
     console.error('[SUBSCRIPTION_PATCH]', error)
-    return Response.json({ error: 'Erro ao atualizar assinatura' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao atualizar assinatura' }, { status: 500 })
   }
 }
