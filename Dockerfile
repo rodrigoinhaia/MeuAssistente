@@ -24,6 +24,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 
+# Copiar diretório public primeiro (garantir que está disponível)
+COPY public ./public
+
 # Copiar código fonte
 COPY . .
 
@@ -52,12 +55,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copiar arquivos necessários para produção
-COPY --from=builder /app/public ./public
-
 # Copiar arquivos standalone do Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copiar diretório public (necessário para assets estáticos)
+# O Next.js standalone não copia automaticamente o public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Copiar Prisma Client e schema
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
