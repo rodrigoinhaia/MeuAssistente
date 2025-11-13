@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import apiClient from '@/lib/axios-config'
 import { useSession } from 'next-auth/react'
 import { useAdminContext } from '@/hooks/useAdminContext'
+import { RiUserAddLine } from 'react-icons/ri'
 
 interface Family {
   id: string
@@ -359,7 +360,19 @@ export default function FamiliesPage() {
 
             {/* Seção de Usuários */}
             <div className="border-t border-slate-200 pt-6 mt-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">Usuários da Família</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-800">Usuários da Família</h3>
+                <button
+                  onClick={() => {
+                    // Redirecionar para página de usuários com a família selecionada
+                    window.location.href = '/dashboard/users'
+                  }}
+                  className="px-3 py-1.5 text-sm bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+                >
+                  <RiUserAddLine className="w-4 h-4" />
+                  Adicionar Usuário
+                </button>
+              </div>
               {loadingUsers ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
