@@ -15,7 +15,11 @@ export async function GET(req: Request) {
   try {
     // SUPER_ADMIN em modo admin vê todos os workflows
     // SUPER_ADMIN em modo família e OWNER vê apenas workflows da sua família
-    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : { familyId }
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
+      ? {} 
+      : familyId 
+        ? { familyId: familyId as string }
+        : { familyId: { in: [] } } // Retorna vazio se não tiver familyId
 
     const workflows = await prisma.n8NWorkflow.findMany({
       where: whereClause,

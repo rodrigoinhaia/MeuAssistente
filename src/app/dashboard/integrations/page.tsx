@@ -25,7 +25,6 @@ import {
   RiServerLine,
   RiQrCodeLine,
   RiDeleteBinLine,
-  RiBankLine,
   RiMoneyDollarCircleLine,
   RiRefreshLine as RiRefreshLineIcon
 } from 'react-icons/ri'
@@ -69,11 +68,6 @@ export default function IntegrationsPage() {
   })
   const [n8nStatus, setN8nStatus] = useState<any>(null)
   const [checkingStatus, setCheckingStatus] = useState(false)
-  const [showOpenFinanceModal, setShowOpenFinanceModal] = useState(false)
-  const [bankConnections, setBankConnections] = useState<any[]>([])
-  const [institutions, setInstitutions] = useState<any[]>([])
-  const [syncingBank, setSyncingBank] = useState<string | null>(null)
-  const [categorizing, setCategorizing] = useState(false)
   const [showEvolutionModal, setShowEvolutionModal] = useState(false)
   const [evolutionForm, setEvolutionForm] = useState({
     apiUrl: '',
@@ -92,8 +86,6 @@ export default function IntegrationsPage() {
     if (status === 'authenticated') {
       fetchIntegrations()
       fetchSyncHistory()
-      fetchBankConnections()
-      fetchInstitutions()
     }
     
     // Verificar se deve abrir modal de importação
@@ -267,103 +259,6 @@ export default function IntegrationsPage() {
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao desconectar N8N')
-    }
-  }
-
-  async function fetchBankConnections() {
-    try {
-      const res = await apiClient.get('/integrations/open-finance')
-      setBankConnections(res.data.connections || [])
-    } catch (err: any) {
-      // Silencioso - pode não ter conexões ainda
-    }
-  }
-
-  async function fetchInstitutions() {
-    try {
-      const res = await apiClient.get('/integrations/open-finance?action=institutions')
-      setInstitutions(res.data.institutions || [])
-    } catch (err: any) {
-      // Silencioso
-    }
-  }
-
-  async function connectBank(institutionId: string, institutionName: string) {
-    setError('')
-    setSuccess('')
-    try {
-      const res = await apiClient.post('/integrations/open-finance', {
-        institutionId,
-        institutionName,
-      })
-      if (res.data.status === 'ok') {
-        // Redirecionar para URL de autorização do Open Finance
-        if (res.data.authUrl) {
-          window.location.href = res.data.authUrl
-        } else {
-          setSuccess('Conexão iniciada! Siga as instruções para autorizar.')
-          setShowOpenFinanceModal(false)
-          fetchBankConnections()
-        }
-      } else {
-        setError(res.data.message || 'Erro ao conectar conta bancária')
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao conectar conta bancária')
-    }
-  }
-
-  async function syncBankTransactions(connectionId: string) {
-    setSyncingBank(connectionId)
-    setError('')
-    setSuccess('')
-    try {
-      const res = await apiClient.post('/sync/open-finance', { connectionId })
-      if (res.data.status === 'ok') {
-        setSuccess(`Sincronização concluída: ${res.data.imported} transações importadas`)
-        // Disparar categorização automática
-        setTimeout(() => categorizeTransactions(), 1000)
-      } else {
-        setError(res.data.message || 'Erro ao sincronizar transações')
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao sincronizar transações')
-    }
-    setSyncingBank(null)
-  }
-
-  async function categorizeTransactions() {
-    setCategorizing(true)
-    setError('')
-    setSuccess('')
-    try {
-      const res = await apiClient.patch('/sync/open-finance')
-      if (res.data.status === 'ok') {
-        setSuccess(`Categorização concluída: ${res.data.categorized} transações categorizadas por IA`)
-      }
-    } catch (err: any) {
-      // Silencioso - não é crítico
-    }
-    setCategorizing(false)
-  }
-
-  async function disconnectBank(connectionId: string) {
-    if (!confirm('Tem certeza que deseja desconectar esta conta bancária?')) return
-    
-    setError('')
-    setSuccess('')
-    try {
-      const res = await apiClient.delete('/integrations/open-finance', {
-        data: { connectionId },
-      })
-      if (res.data.status === 'ok') {
-        setSuccess('Conta bancária desconectada com sucesso!')
-        fetchBankConnections()
-      } else {
-        setError(res.data.message || 'Erro ao desconectar conta bancária')
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao desconectar conta bancária')
     }
   }
 
@@ -541,7 +436,6 @@ export default function IntegrationsPage() {
   const hasGoogleIntegration = integrations.some(i => i.provider === 'google' && i.isActive)
   const hasN8NIntegration = integrations.some(i => i.provider === 'n8n' && i.isActive)
   const n8nIntegration = integrations.find(i => i.provider === 'n8n' && i.isActive)
-  const hasBankConnections = bankConnections.length > 0
   // Evolution API - Temporariamente desabilitado
   // const hasEvolutionIntegration = integrations.some(i => i.provider === 'evolution_api' && i.isActive)
   // const evolutionIntegration = integrations.find(i => i.provider === 'evolution_api' && i.isActive)
@@ -606,13 +500,6 @@ export default function IntegrationsPage() {
           >
             <RiRadarLine className="w-5 h-5" />
             {hasN8NIntegration ? 'N8N já conectado' : 'Conectar N8N (Automações & WhatsApp)'}
-          </button>
-          <button
-            onClick={() => setShowOpenFinanceModal(true)}
-            className="px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:shadow-lg hover:shadow-emerald-500/30"
-          >
-            <RiBankLine className="w-5 h-5" />
-            Conectar Conta Bancária (Open Finance)
           </button>
           {/* Evolution API - Temporariamente desabilitado
           <button
@@ -738,85 +625,6 @@ export default function IntegrationsPage() {
         </div>
       )}
       */}
-
-      {/* Conexões Bancárias */}
-      {hasBankConnections && (
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 mb-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <RiBankLine className="w-6 h-6 text-emerald-600" />
-            Contas Bancárias Conectadas
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {bankConnections.map(connection => (
-              <div
-                key={connection.id}
-                className="bg-gradient-to-br from-white to-emerald-50 rounded-xl p-5 border-2 border-emerald-200 hover:border-emerald-300 transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white">
-                      <RiBankLine className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg text-slate-800">{connection.institutionName}</h3>
-                      <p className="text-sm text-slate-600">
-                        {connection.accountType === 'checking' ? 'Conta Corrente' : 
-                         connection.accountType === 'savings' ? 'Conta Poupança' :
-                         connection.accountType === 'credit_card' ? 'Cartão de Crédito' : 'Conta'}
-                        {connection.accountNumber && ` • ••• ${connection.accountNumber.slice(-4)}`}
-                      </p>
-                    </div>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                    connection.status === 'active'
-                      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                      : 'bg-red-100 text-red-700 border-red-200'
-                  }`}>
-                    {connection.status === 'active' ? 'Ativa' : connection.status}
-                  </span>
-                </div>
-                {connection.lastSyncAt && (
-                  <div className="text-xs text-slate-500 mb-3">
-                    Última sincronização: {format(new Date(connection.lastSyncAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => syncBankTransactions(connection.id)}
-                    disabled={syncingBank === connection.id || connection.status !== 'active'}
-                    className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {syncingBank === connection.id ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Sincronizando...
-                      </>
-                    ) : (
-                      <>
-                        <RiRefreshLineIcon className="w-4 h-4" />
-                        Sincronizar Transações
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => disconnectBank(connection.id)}
-                    className="px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                    title="Desconectar"
-                  >
-                    <RiDeleteBinLine className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          {categorizing && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-sm flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              Categorizando transações com IA...
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Integrações Ativas */}
       <div className="bg-white rounded-2xl border border-slate-200/60 p-6 mb-6 shadow-sm">
@@ -1234,81 +1042,6 @@ export default function IntegrationsPage() {
               >
                 Conectar
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Open Finance */}
-      {showOpenFinanceModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl border border-slate-200/60 space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent flex items-center gap-2">
-                <RiBankLine className="w-6 h-6 text-emerald-600" />
-                Conectar Conta Bancária (Open Finance)
-              </h2>
-              <button
-                onClick={() => {
-                  setShowOpenFinanceModal(false)
-                  setError('')
-                }}
-                className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
-              >
-                <RiCloseCircleLine className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <p className="text-sm text-blue-800">
-                <strong>🔒 Seguro e Regulado:</strong> O Open Finance é regulado pelo Banco Central do Brasil. 
-                Suas credenciais bancárias nunca são armazenadas. Você autoriza o acesso diretamente no seu banco.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-3">
-                Selecione seu banco:
-              </label>
-              {institutions.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-8 h-8 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-slate-600">Carregando bancos disponíveis...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {institutions.map(institution => (
-                    <button
-                      key={institution.id}
-                      onClick={() => connectBank(institution.id, institution.name)}
-                      className="p-4 bg-gradient-to-br from-white to-slate-50 rounded-xl border-2 border-slate-200 hover:border-emerald-300 transition-all text-left group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold group-hover:scale-110 transition-transform">
-                          {institution.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-800 text-sm">{institution.name}</p>
-                          <p className="text-xs text-slate-500">Código: {institution.code}</p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-slate-200">
-              <p className="text-xs text-slate-600">
-                <strong>Como funciona:</strong> Ao selecionar seu banco, você será redirecionado para a página de autorização do banco. 
-                Após autorizar, suas transações serão importadas automaticamente e categorizadas por IA.
-              </p>
             </div>
           </div>
         </div>

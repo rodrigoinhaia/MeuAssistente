@@ -10,9 +10,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
   const userId = (session.user as any)?.id
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+  
   try {
     const integrations = await prisma.integration.findMany({
-      where: { familyId, userId },
+      where: { familyId: validFamilyId, userId },
       select: {
         id: true,
         provider: true,
@@ -34,6 +41,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
   const userId = (session.user as any)?.id
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+  
   try {
     const { provider, accessToken, refreshToken, expiresAt, scope } = await req.json()
     if (!provider || !accessToken) {
@@ -43,7 +57,7 @@ export async function POST(req: Request) {
     const integration = await prisma.integration.upsert({
       where: {
         familyId_userId_provider: {
-          familyId,
+          familyId: validFamilyId,
           userId,
           provider,
         },
@@ -61,7 +75,7 @@ export async function POST(req: Request) {
         refreshToken,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         scope,
-        familyId,
+        familyId: validFamilyId,
         userId,
       },
     })
