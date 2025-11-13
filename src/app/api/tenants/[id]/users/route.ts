@@ -19,12 +19,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
   const isSuperAdminInAdminMode = userRole === 'SUPER_ADMIN' && adminContext === 'admin'
   
-  // Se não for SUPER_ADMIN em modo admin, verificar se é OWNER da família
+  // Se não for SUPER_ADMIN em modo admin, verificar se é OWNER ou SUPER_ADMIN em modo família
   if (!isSuperAdminInAdminMode) {
-    if (userRole !== 'OWNER') {
+    // SUPER_ADMIN em modo família deve se comportar como OWNER
+    const isSuperAdminInFamilyMode = userRole === 'SUPER_ADMIN' && adminContext === 'family'
+    const isOwner = userRole === 'OWNER'
+    
+    if (!isOwner && !isSuperAdminInFamilyMode) {
       return NextResponse.json({ status: 'error', message: 'Acesso restrito.' }, { status: 403 })
     }
-    // Verificar se a família pertence ao usuário
+    // Verificar se a família pertence ao usuário (OWNER ou SUPER_ADMIN em modo família)
     const userFamilyId = (session.user as any)?.familyId
     if (userFamilyId !== id) {
       return NextResponse.json({ status: 'error', message: 'Acesso restrito a esta família.' }, { status: 403 })
