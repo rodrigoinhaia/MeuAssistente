@@ -75,12 +75,25 @@ export const authOptions: NextAuthOptions = {
 
         console.log('Senha fornecida:', credentials.password)
         console.log('Hash armazenado:', userWithfamily.password)
+        console.log('Hash length:', userWithfamily.password?.length)
+        console.log('Hash starts with $2:', userWithfamily.password?.startsWith('$2'))
+        
+        // Verificar se o hash está no formato correto
+        if (!userWithfamily.password || !userWithfamily.password.startsWith('$2')) {
+          console.error('Hash de senha inválido ou não está no formato bcrypt')
+          throw new Error('Erro interno: hash de senha inválido. Contate o administrador.')
+        }
         
         const isValid = await bcrypt.compare(credentials.password, userWithfamily.password)
         console.log('Senha válida:', isValid)
 
         if (!isValid) {
-          console.error('Senha inválida')
+          console.error('Senha inválida - Detalhes:', {
+            email: credentials.email,
+            passwordLength: credentials.password?.length,
+            hashLength: userWithfamily.password?.length,
+            hashPrefix: userWithfamily.password?.substring(0, 10),
+          })
           throw new Error('Senha inválida')
         }
 
