@@ -16,7 +16,8 @@ import {
   RiUserLine,
   RiCalendarLine,
   RiShieldStarLine,
-  RiShieldCheckLine
+  RiShieldCheckLine,
+  RiLockPasswordLine
 } from 'react-icons/ri'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -39,6 +40,10 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [passwordModal, setPasswordModal] = useState<{ userId: string; userName: string } | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [changingPassword, setChangingPassword] = useState(false)
   const [filter, setFilter] = useState({
     search: '',
     role: '',
@@ -95,6 +100,40 @@ export default function UsersPage() {
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao atualizar status do usuário')
     }
+  }
+
+  async function handlePasswordChange() {
+    if (!passwordModal) return
+
+    setError('')
+    setSuccess('')
+    
+    if (!newPassword || !confirmPassword) {
+      setError('Preencha todos os campos')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('As senhas não coincidem')
+      return
+    }
+
+    setChangingPassword(true)
+    try {
+      await apiClient.patch(`/users/${passwordModal.userId}/password`, { password: newPassword })
+      setSuccess('Senha alterada com sucesso!')
+      setPasswordModal(null)
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao alterar senha')
+    }
+    setChangingPassword(false)
   }
 
   function getRoleConfig(role: string) {
@@ -411,10 +450,107 @@ export default function UsersPage() {
                       {user.role === 'OWNER' ? 'Protegido' : 'Você'}
                     </div>
                   )}
+                  {canEditStatus && (
+                    <button
+                      onClick={() => setPasswordModal({ userId: user.id, userName: user.name })}
+                      className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+                      title="Alterar senha"
+                    >
+                      <RiLockPasswordLine className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Modal de Alteração de Senha */}
+      {passwordModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent mb-2">
+              Alterar Senha
+            </h2>
+            <p className="text-slate-600 mb-6">
+              Alterando senha de <strong>{passwordModal.userName}</strong>
+            </p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm">
+                {success}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Nova Senha
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="Mínimo de 6 caracteres"
+                  minLength={6}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Confirmar Nova Senha
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="Digite a senha novamente"
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setPasswordModal(null)
+                  setNewPassword('')
+                  setConfirmPassword('')
+                  setError('')
+                  setSuccess('')
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePasswordChange}
+                disabled={changingPassword}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {changingPassword ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Alterando...
+                  </>
+                ) : (
+                  <>
+                    <RiLockPasswordLine className="w-4 h-4" />
+                    Alterar Senha
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

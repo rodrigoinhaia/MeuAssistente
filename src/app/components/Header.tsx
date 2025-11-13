@@ -1,11 +1,13 @@
 'use client'
 
 import { useSession, signOut } from 'next-auth/react'
-import { RiMoonLine, RiUserLine } from 'react-icons/ri'
+import { useRouter } from 'next/navigation'
+import { RiMoonLine, RiUserLine, RiSettings3Line } from 'react-icons/ri'
 
 
 export default function Header() {
   const { data: session } = useSession()
+  const router = useRouter()
   const role = (session?.user as any)?.role
 
   return (
@@ -32,7 +34,15 @@ export default function Header() {
                 <RiUserLine className="w-5 h-5 text-slate-600" />
               </button>
               
-              <div className="absolute right-0 mt-2 w-48 py-2 bg-white rounded-xl shadow-xl border border-slate-200/60 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all backdrop-blur-sm">
+              <div className="absolute right-0 mt-2 w-48 py-2 bg-white rounded-xl shadow-xl border border-slate-200/60 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all backdrop-blur-sm z-50">
+                <button
+                  onClick={() => router.push('/dashboard/profile')}
+                  className="w-full px-4 py-2 text-sm text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 text-left rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <RiSettings3Line className="w-4 h-4" />
+                  Meu Perfil
+                </button>
+                <div className="border-t border-slate-200 my-1" />
                 <button
                   onClick={() => signOut()}
                   className="w-full px-4 py-2 text-sm text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 text-left rounded-lg transition-colors"
