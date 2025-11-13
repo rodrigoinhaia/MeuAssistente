@@ -15,7 +15,7 @@ export interface ParsedTransaction {
  */
 export async function parseOFX(fileContent: string): Promise<ParsedTransaction[]> {
   try {
-    const ofxData = ofxParser.parseString(fileContent)
+    const ofxData = await ofxParser.parse(fileContent) as any
     const transactions: ParsedTransaction[] = []
 
     // OFX pode ter múltiplas contas

@@ -155,7 +155,14 @@ export async function confirmAppointment(phoneNumber: string): Promise<{
     const { pendingAppointment, userId, tenantId } = context
 
     // Validar data futura
-    if (pendingAppointment.date && pendingAppointment.date < new Date()) {
+    if (!pendingAppointment.date) {
+      return {
+        success: false,
+        message: 'Data do compromisso é obrigatória.',
+      }
+    }
+
+    if (pendingAppointment.date < new Date()) {
       return {
         success: false,
         message: 'Não é possível agendar compromissos no passado.',
@@ -167,7 +174,7 @@ export async function confirmAppointment(phoneNumber: string): Promise<{
       data: {
         familyId: tenantId,
         userId,
-        title: pendingAppointment.title,
+        title: pendingAppointment.title || 'Compromisso',
         description: pendingAppointment.description || '',
         date: pendingAppointment.date,
         location: pendingAppointment.location || '',
