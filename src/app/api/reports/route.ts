@@ -25,7 +25,13 @@ export async function GET(req: Request) {
       }
     }
     
-    const whereClause: { familyId?: string } = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : { familyId: familyId! }
+    // SEGURANÇA: Nunca usar {} quando não for modo admin - sempre filtrar por familyId
+    // Se familyId for null (mesmo após validação), usar filtro que retorna vazio
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
+      ? {} 
+      : familyId 
+        ? { familyId } 
+        : { familyId: { in: [] } } // Filtro seguro que retorna zero resultados
 
     // Receita total (soma de todas as assinaturas ativas)
     const activeSubscriptions = await prisma.subscription.findMany({
@@ -52,7 +58,11 @@ export async function GET(req: Request) {
 
     // Total de famílias (clientes)
     const totalFamilies = await prisma.family.count({
-      where: role === 'SUPER_ADMIN' && context === 'admin' ? {} : { id: familyId! },
+      where: role === 'SUPER_ADMIN' && context === 'admin' 
+        ? {} 
+        : familyId 
+          ? { id: familyId } 
+          : { id: { in: [] } }, // Filtro seguro que retorna zero resultados
     })
 
     // Receita mensal dos últimos 6 meses
