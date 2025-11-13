@@ -365,9 +365,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Enviar código OTP via WhatsApp se tiver telefone válido
+    const userPhone = body.phone || ''
+    if (userPhone && userPhone !== '00000000000') {
+      try {
+        await createAndSendOTP(newUser.id, userPhone)
+      } catch (otpError) {
+        console.error('[USERS_POST] Erro ao enviar OTP:', otpError)
+        // Continua mesmo se falhar - usuário pode solicitar reenvio depois
+      }
+    }
+
     return NextResponse.json({ 
       status: 'ok',
-      message: 'Usuário criado com sucesso!',
+      message: 'Usuário criado com sucesso! Verifique o WhatsApp para receber o código de verificação.',
+      requiresVerification: true,
       user: {
         ...newUser,
         createdAt: newUser.createdAt.toISOString(),
