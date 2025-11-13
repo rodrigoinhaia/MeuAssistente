@@ -30,6 +30,7 @@ async function main() {
       phone: '00000000000',
       role: UserRole.SUPER_ADMIN,
       familyId: superAdminFamily.id,
+      isActive: true, // Garantir que está ativo
     },
   })
   console.log(`Created SUPER_ADMIN user: ${superAdmin.email}`)
@@ -54,6 +55,7 @@ async function main() {
       phone: '11987654321',
       role: UserRole.OWNER,
       familyId: ownerFamily.id,
+      isActive: true, // Garantir que está ativo
     },
   })
   console.log(`Created OWNER user: ${owner.email}`)
@@ -68,6 +70,7 @@ async function main() {
       phone: '11987654323',
       role: UserRole.USER,
       familyId: ownerFamily.id,
+      isActive: true, // Garantir que está ativo
     },
   })
   console.log(`Created USER user: ${commonUser.email}`)
