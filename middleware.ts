@@ -20,6 +20,7 @@ export async function middleware(req: NextRequest) {
     '/api/webhooks/asaas', // Webhook do Asaas (não precisa autenticação)
     '/login',
     '/register',
+    '/verify', // Página de verificação OTP
     '/_next',
     '/favicon.ico',
     '/icon.svg',
@@ -98,6 +99,13 @@ export async function middleware(req: NextRequest) {
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // Verificar se o usuário está verificado (exceto na página de verificação)
+  const isVerified = (token as any).isVerified !== false // Default true para compatibilidade
+  if (!isVerified && pathname !== '/verify' && !pathname.startsWith('/api/auth')) {
+    console.log('[MIDDLEWARE] Usuário não verificado, redirecionando para /verify')
+    return NextResponse.redirect(new URL('/verify', req.url))
   }
 
   // Token válido, permite acesso

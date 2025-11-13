@@ -43,6 +43,7 @@ export const authOptions: NextAuthOptions = {
             familyId: true,
             role: true,
             isActive: true,
+            isVerified: true,
             family: {
               select: {
                 isActive: true,
@@ -57,8 +58,14 @@ export const authOptions: NextAuthOptions = {
         console.log('Usuário encontrado:', userWithfamily ? { ...userWithfamily, password: '[REDACTED]' } : null)
 
         if (!userWithfamily || !userWithfamily.password) {
-          console.error('Usuário não encontrado ou inativo')
-          throw new Error('Usuário não encontrado ou conta desativada')
+          console.error('Usuário não encontrado ou sem senha')
+          throw new Error('E-mail ou senha inválidos')
+        }
+
+        // Verificar se o usuário está verificado
+        if (!userWithfamily.isVerified) {
+          console.error('Usuário não verificado:', credentials.email)
+          throw new Error('Seu WhatsApp ainda não foi verificado. Verifique seu WhatsApp e insira o código de verificação.')
         }
 
         // Verifica se o usuário está ativo (redundante, mas garante)
@@ -104,6 +111,7 @@ export const authOptions: NextAuthOptions = {
           image: null,
           familyId: userWithfamily.familyId,
           role: userWithfamily.role,
+          isVerified: userWithfamily.isVerified,
         }
 
         console.log('Retornando dados do usuário:', userData)
@@ -123,6 +131,7 @@ export const authOptions: NextAuthOptions = {
           id: token.id as string,
           familyId: token.familyId as string,
           role: token.role as string,
+          isVerified: token.isVerified as boolean,
         }
       }
       console.log('[AUTH_SESSION] Session callback:', {
@@ -143,6 +152,7 @@ export const authOptions: NextAuthOptions = {
         token.id = (user as any).id
         token.familyId = (user as any).familyId
         token.role = (user as any).role
+        token.isVerified = (user as any).isVerified
         console.log('[AUTH_JWT] JWT callback - User login:', {
           userId: (user as any).id,
           role: (user as any).role,

@@ -44,6 +44,15 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [changingPassword, setChangingPassword] = useState(false)
+  const [createModal, setCreateModal] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'USER' as 'USER' | 'SUPER_ADMIN',
+  })
   const [filter, setFilter] = useState({
     search: '',
     role: '',
@@ -136,6 +145,72 @@ export default function UsersPage() {
     setChangingPassword(false)
   }
 
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    // Validações
+    if (!newUser.name.trim()) {
+      setError('Nome é obrigatório')
+      return
+    }
+
+    if (!newUser.email.trim()) {
+      setError('E-mail é obrigatório')
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(newUser.email)) {
+      setError('E-mail inválido')
+      return
+    }
+
+    if (!newUser.password) {
+      setError('Senha é obrigatória')
+      return
+    }
+
+    if (newUser.password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres')
+      return
+    }
+
+    if (newUser.password !== newUser.confirmPassword) {
+      setError('As senhas não coincidem')
+      return
+    }
+
+    setCreating(true)
+    try {
+      const res = await apiClient.post('/users', {
+        name: newUser.name.trim(),
+        email: newUser.email.trim(),
+        password: newUser.password,
+        role: newUser.role,
+      })
+
+      if (res.data.status === 'ok') {
+        setSuccess('Usuário criado com sucesso!')
+        setCreateModal(false)
+        setNewUser({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          role: 'USER',
+        })
+        fetchUsers()
+      } else {
+        setError(res.data.error || 'Erro ao criar usuário')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao criar usuário')
+    }
+    setCreating(false)
+  }
+
   function getRoleConfig(role: string) {
     switch (role) {
       case 'OWNER':
@@ -217,6 +292,13 @@ export default function UsersPage() {
           </h1>
           <p className="text-slate-600 mt-1">Gerencie os membros da sua família</p>
         </div>
+        <button
+          onClick={() => setCreateModal(true)}
+          className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-semibold rounded-xl shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 transition-all flex items-center gap-2"
+        >
+          <RiUserAddLine className="w-5 h-5" />
+          Criar Usuário
+        </button>
       </div>
 
       {/* Estatísticas */}
@@ -551,6 +633,145 @@ export default function UsersPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Modal de Criar Usuário */}
+      {createModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <form
+            onSubmit={handleCreateUser}
+            className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60"
+          >
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent mb-6">
+              Criar Novo Usuário
+            </h2>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm">
+                {success}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="Nome do usuário"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="usuario@email.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Papel
+                </label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'USER' | 'SUPER_ADMIN' })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                >
+                  <option value="USER">Usuário</option>
+                  {currentUserRole === 'SUPER_ADMIN' && (
+                    <option value="SUPER_ADMIN">Super Admin</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Senha
+                </label>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="Mínimo de 6 caracteres"
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Confirmar Senha
+                </label>
+                <input
+                  type="password"
+                  value={newUser.confirmPassword}
+                  onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="Digite a senha novamente"
+                  minLength={6}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateModal(false)
+                  setNewUser({
+                    name: '',
+                    email: '',
+                    password: '',
+                    confirmPassword: '',
+                    role: 'USER',
+                  })
+                  setError('')
+                  setSuccess('')
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={creating}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {creating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    <RiUserAddLine className="w-4 h-4" />
+                    Criar Usuário
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

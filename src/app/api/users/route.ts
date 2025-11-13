@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/authorization';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
+import { createAndSendOTP } from '@/lib/otp';
 
 export async function GET(request: NextRequest) {
   console.log('[USERS_GET] Iniciando requisição');
@@ -255,5 +256,133 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('[USERS_PATCH]', error);
     return NextResponse.json({ error: 'Erro ao atualizar usuário.' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const contextHeader = request.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  
+  const authResult = await requireAuth(request, ['OWNER', 'SUPER_ADMIN'], adminContext);
+  if (authResult.error) {
+    return NextResponse.json({ error: authResult.error.message }, { status: authResult.error.status });
+  }
+
+  try {
+    const body = await request.json();
+    const { name, email, password, role } = body;
+
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: 'Nome, e-mail e senha são obrigatórios.' }, { status: 400 });
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'E-mail inválido.' }, { status: 400 });
+    }
+
+    const { role: userRole, familyId, adminContext: context } = authResult;
+
+    // Determinar familyId baseado no contexto
+    let targetFamilyId: string | null = null;
+    
+    if (userRole === 'SUPER_ADMIN' && context === 'admin') {
+      // SUPER_ADMIN em modo admin pode criar usuário em qualquer família
+      // Se não especificou familyId, usa a família do próprio usuário
+      targetFamilyId = body.familyId || familyId;
+    } else {
+      // OWNER ou SUPER_ADMIN em modo família só pode criar na própria família
+      if (!familyId) {
+        return NextResponse.json({ 
+          error: 'FamilyId não encontrado. Não é possível criar usuário.' 
+        }, { status: 400 });
+      }
+      targetFamilyId = familyId;
+    }
+
+    if (!targetFamilyId) {
+      return NextResponse.json({ 
+        error: 'FamilyId é obrigatório para criar usuário.' 
+      }, { status: 400 });
+    }
+
+    // Verificar se o email já existe na família
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email,
+        familyId: targetFamilyId,
+      },
+    });
+
+    if (existingUser) {
+      return NextResponse.json({ 
+        error: 'Este e-mail já está cadastrado nesta família.' 
+      }, { status: 400 });
+    }
+
+    // Validar role
+    const validRoles = ['USER', 'SUPER_ADMIN'];
+    const userRoleToCreate = role && validRoles.includes(role) ? role : 'USER';
+
+    // Não permitir criar OWNER
+    if (userRoleToCreate === 'OWNER') {
+      return NextResponse.json({ 
+        error: 'Não é possível criar um usuário com papel de OWNER.' 
+      }, { status: 400 });
+    }
+
+    // Hash da senha
+    const bcrypt = await import('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Criar usuário
+    // Nota: cpf e phone são obrigatórios no schema, então geramos valores temporários se não fornecidos
+    const newUser = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: hashedPassword,
+        role: userRoleToCreate,
+        familyId: targetFamilyId,
+        isActive: true,
+        isVerified: false, // Usuários criados por admin também precisam verificar
+        // Campos obrigatórios do schema - gerar valores temporários se não fornecidos
+        cpf: body.cpf || `00000000000`, // CPF temporário - pode ser atualizado depois
+        phone: body.phone || `00000000000`, // Telefone temporário - pode ser atualizado depois
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({ 
+      status: 'ok',
+      message: 'Usuário criado com sucesso!',
+      user: {
+        ...newUser,
+        createdAt: newUser.createdAt.toISOString(),
+      }
+    });
+  } catch (error: any) {
+    console.error('[USERS_POST]', error);
+    
+    // Erro de constraint única (email duplicado)
+    if (error.code === 'P2002') {
+      return NextResponse.json({ 
+        error: 'Este e-mail já está cadastrado.' 
+      }, { status: 400 });
+    }
+    
+    return NextResponse.json({ error: 'Erro ao criar usuário.' }, { status: 500 });
   }
 }

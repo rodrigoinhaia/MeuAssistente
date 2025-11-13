@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { createAsaasCustomer, createAsaasSubscription } from '@/lib/asaas'
+import { createAndSendOTP } from '@/lib/otp'
 
 export async function POST(req: Request) {
   try {
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
       })
     }
 
-    // Cria usuário OWNER
+    // Cria usuário OWNER (não verificado inicialmente)
     const hashedPassword = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({
       data: {
@@ -84,8 +85,17 @@ export async function POST(req: Request) {
         state: address.state,
         role: 'OWNER',
         familyId: family.id,
+        isVerified: false, // Usuário precisa verificar via OTP
       },
     })
+
+    // Gerar e enviar código OTP via WhatsApp
+    try {
+      await createAndSendOTP(user.id, phoneNumber)
+    } catch (otpError) {
+      console.error('[REGISTER] Erro ao enviar OTP:', otpError)
+      // Continua mesmo se falhar - usuário pode solicitar reenvio depois
+    }
 
     // Calcula datas do trial (3 dias grátis)
     const startDate = new Date()
@@ -168,7 +178,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       status: 'ok',
-      message: 'Usuário registrado com sucesso! Você tem 3 dias grátis para testar.',
+      message: 'Usuário registrado com sucesso! Verifique seu WhatsApp para receber o código de verificação.',
+      requiresVerification: true,
       user: { id: user.id, name: user.name, email: user.email },
       subscription: {
         id: subscription.id,

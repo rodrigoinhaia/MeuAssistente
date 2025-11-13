@@ -55,6 +55,7 @@ model User {
   state        String?
   role         UserRole @default(OWNER)
   isActive     Boolean  @default(true) @map("is_active")
+  isVerified   Boolean  @default(false) @map("is_verified")
   familyId     String
   family       Family   @relation(fields: [familyId], references: [id])
   createdAt    DateTime @default(now())
@@ -67,9 +68,27 @@ model User {
   integrations    Integration[]
   syncLogs        SyncLog[]
   bankConnections BankConnection[]
+  otpVerifications OTPVerification[]
 
   @@unique([email, familyId])
   @@map("users")
+}
+
+// Modelo para Verificação OTP via WhatsApp
+model OTPVerification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  phone     String
+  expiresAt DateTime @map("expires_at")
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  verifiedAt DateTime? @map("verified_at")
+
+  @@index([userId])
+  @@index([phone, code])
+  @@map("otp_verifications")
 }
 
 // Modelo para Categorias

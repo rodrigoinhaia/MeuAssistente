@@ -188,8 +188,28 @@ export default function RegisterPage(): ReactElement {
       })
 
       if (res.data.status === 'ok') {
-        setSuccess('Cadastro realizado com sucesso! Redirecionando...')
-        setTimeout(() => router.push('/login'), 2000)
+        if (res.data.requiresVerification) {
+          setSuccess('Cadastro realizado! Verifique seu WhatsApp para receber o código de verificação.')
+          // Fazer login automático e redirecionar para verificação
+          setTimeout(async () => {
+            try {
+              // Tentar fazer login automático
+              const signIn = (await import('next-auth/react')).signIn
+              await signIn('credentials', {
+                email: form.email,
+                password: form.password,
+                redirect: false,
+              })
+              router.push('/verify')
+            } catch (err) {
+              // Se falhar, redirecionar para login
+              router.push('/login?message=Verifique seu WhatsApp para receber o código de verificação')
+            }
+          }, 2000)
+        } else {
+          setSuccess('Cadastro realizado com sucesso! Redirecionando...')
+          setTimeout(() => router.push('/login'), 2000)
+        }
       } else {
         setError(res.data.message || 'Erro ao registrar')
       }
