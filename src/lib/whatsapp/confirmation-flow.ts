@@ -177,7 +177,6 @@ export async function confirmAppointment(phoneNumber: string): Promise<{
         title: pendingAppointment.title || 'Compromisso',
         description: pendingAppointment.description || '',
         date: pendingAppointment.date,
-        location: pendingAppointment.location || '',
       },
     })
 

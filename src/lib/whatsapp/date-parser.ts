@@ -13,7 +13,7 @@ import { ptBR } from 'date-fns/locale'
 export function parseNaturalDate(text: string, referenceDate?: Date): Date | null {
   try {
     const ref = referenceDate || new Date()
-    const results = chrono.parse(text, ref, { locale: chrono.pt.createCasualConfiguration() })
+    const results = chrono.pt.parse(text, ref)
 
     if (results.length === 0) {
       return null

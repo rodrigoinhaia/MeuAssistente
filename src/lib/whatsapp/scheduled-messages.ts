@@ -59,11 +59,11 @@ export async function sendDailySummary(): Promise<void> {
 
       const totalExpenses = transactions
         .filter((t) => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0)
+        .reduce((sum, t) => sum + Number(t.amount), 0)
 
       const totalIncome = transactions
         .filter((t) => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0)
+        .reduce((sum, t) => sum + Number(t.amount), 0)
 
       // Montar mensagem
       let message = `🌅 *Bom dia! Resumo de hoje (${format(today, 'dd/MM', { locale: ptBR })}):*\n\n`
@@ -123,7 +123,7 @@ export async function sendAppointmentReminders(): Promise<void> {
     })
 
     for (const appointment of appointments) {
-      const message = `⏰ *Lembrete de Compromisso*\n\n📅 ${appointment.title}\n🕐 ${format(appointment.date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}\n${appointment.location ? `📍 ${appointment.location}\n` : ''}\n💡 Não se esqueça!`
+      const message = `⏰ *Lembrete de Compromisso*\n\n📅 ${appointment.title}\n🕐 ${format(appointment.date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}\n💡 Não se esqueça!`
 
       // TODO: Enviar mensagem via WhatsApp
       // await sendWhatsAppMessage(appointment.family.phoneNumber, message)

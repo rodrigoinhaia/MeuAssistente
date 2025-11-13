@@ -65,8 +65,8 @@ export async function generateWeeklySummary(
       getNextWeekAppointments(tenantId),
     ])
 
-    const incomeTotal = income._sum.amount || 0
-    const expensesTotal = expenses._sum.amount || 0
+    const incomeTotal = Number(income._sum.amount || 0)
+    const expensesTotal = Number(expenses._sum.amount || 0)
     const balance = incomeTotal - expensesTotal
 
     // Montar mensagem

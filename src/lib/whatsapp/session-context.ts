@@ -60,7 +60,7 @@ export async function getSessionContext(
       }
     }
 
-    if (context.pendingAppointment) {
+    if (context.pendingAppointment && context.pendingAppointment.date) {
       context.pendingAppointment.date = new Date(context.pendingAppointment.date)
     }
 
