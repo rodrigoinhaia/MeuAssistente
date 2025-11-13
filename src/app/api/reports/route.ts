@@ -25,7 +25,7 @@ export async function GET(req: Request) {
       }
     }
     
-    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : { familyId }
+    const whereClause: { familyId?: string } = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : { familyId: familyId! }
 
     // Receita total (soma de todas as assinaturas ativas)
     const activeSubscriptions = await prisma.subscription.findMany({

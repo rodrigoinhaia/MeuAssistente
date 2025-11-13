@@ -27,9 +27,9 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
+    const whereClause: { familyId?: string } = (role === 'SUPER_ADMIN' && context === 'admin') 
       ? {} 
-      : { familyId }
+      : { familyId: familyId! }
     
     const subscriptions = await prisma.subscription.findMany({
       where: whereClause,
