@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     // SUPER_ADMIN em modo família e OWNER só da sua família
     const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
       ? {} 
-      : { familyId }
+      : familyId ? { familyId } : {}
     
     const subscriptions = await prisma.subscription.findMany({
       where: whereClause,

@@ -21,6 +21,10 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'FamilyId é obrigatório' }, { status: 400 })
+  }
+
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File

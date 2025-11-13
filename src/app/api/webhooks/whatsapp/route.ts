@@ -11,7 +11,7 @@ import { identifyUserByPhone, getUnregisteredUserMessage } from '@/lib/whatsapp/
 export async function POST(req: Request) {
   try {
     // Verificar autenticação (opcional, mas recomendado)
-    const headersList = headers()
+    const headersList = await headers()
     const authHeader = headersList.get('authorization')
     const webhookSecret = process.env.WHATSAPP_WEBHOOK_SECRET
 

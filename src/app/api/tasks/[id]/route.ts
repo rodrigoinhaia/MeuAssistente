@@ -11,6 +11,10 @@ export async function GET(
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
 
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'FamilyId é obrigatório' }, { status: 400 })
+  }
+
   try {
     const { id } = await params
     const task = await prisma.task.findFirst({
@@ -40,6 +44,10 @@ export async function PUT(
   const { session, role, familyId, error } = await requireAuth(req, [])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
+  }
+
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'FamilyId é obrigatório' }, { status: 400 })
   }
 
   const userId = (session.user as any)?.id
@@ -92,6 +100,10 @@ export async function DELETE(
   const { session, role, familyId, error } = await requireAuth(req, [])
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
+  }
+
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'FamilyId é obrigatório' }, { status: 400 })
   }
 
   const userId = (session.user as any)?.id

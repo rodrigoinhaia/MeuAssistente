@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     // SUPER_ADMIN em modo família e OWNER vê apenas pagamentos da sua família
     const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
       ? {} 
-      : { familyId }
+      : familyId ? { familyId } : {}
 
     const payments = await prisma.payment.findMany({
       where: whereClause,

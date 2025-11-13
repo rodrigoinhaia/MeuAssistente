@@ -11,6 +11,11 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
+    
+    if (!familyId) {
+      return NextResponse.json({ error: 'FamilyId é obrigatório' }, { status: 400 })
+    }
+    
     const user = session.user as any
     const userId = user.id
 

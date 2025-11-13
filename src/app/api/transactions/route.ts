@@ -227,6 +227,11 @@ export async function POST(req: Request) {
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'FamilyId é obrigatório' }, { status: 400 })
+  }
+  
   const userId = (session.user as any)?.id
   try {
     const { description, amount, date, dueDate, type, status = 'pending', categoryId } = await req.json()

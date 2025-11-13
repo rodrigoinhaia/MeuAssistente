@@ -47,6 +47,11 @@ export async function POST(req: Request) {
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'FamilyId é obrigatório' }, { status: 400 })
+  }
+  
   const userId = (session.user as any)?.id
   try {
     const { title, description, dueDate, priority = 'medium', status = 'pending', googleTaskId } = await req.json()

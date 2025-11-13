@@ -23,8 +23,16 @@ interface SidebarProps {
   userRole: string | undefined; // userRole pode ser undefined se a sessão não estiver carregada
 }
 
+// Interface para os itens do menu
+interface MenuItem {
+  href: string
+  icon: any
+  label: string
+  roles?: string[]
+}
+
 // Definição dos itens do menu - Modo Família
-const familyMenuItems = [
+const familyMenuItems: MenuItem[] = [
   { href: '/dashboard', icon: RiDashboardLine, label: 'Dashboard' },
   { href: '/dashboard/users', icon: RiShieldUserLine, label: 'Usuários', roles: ['OWNER', 'SUPER_ADMIN'] },
   { href: '/dashboard/categories', icon: RiPriceTag3Line, label: 'Categorias' },
@@ -36,7 +44,7 @@ const familyMenuItems = [
 ]
 
 // Definição dos itens do menu - Modo Super Admin
-const adminMenuItems = [
+const adminMenuItems: MenuItem[] = [
   { href: '/dashboard', icon: RiDashboardLine, label: 'Dashboard Admin' },
   { href: '/dashboard/tenants', icon: RiTeamLine, label: 'Famílias' },
   { href: '/dashboard/plans', icon: RiPriceTag3Line, label: 'Planos' },

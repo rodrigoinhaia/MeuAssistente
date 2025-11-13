@@ -98,12 +98,12 @@ export async function POST(req: NextRequest) {
             cpfCnpj: owner.cpf.replace(/\D/g, ''),
             phone: owner.phone.replace(/\D/g, ''),
             postalCode: owner.cep?.replace(/\D/g, ''),
-            address: owner.street,
-            addressNumber: owner.number,
-            complement: owner.complement,
-            province: owner.neighborhood,
-            city: owner.city,
-            state: owner.state,
+            address: owner.street ?? undefined,
+            addressNumber: owner.number ?? undefined,
+            complement: owner.complement ?? undefined,
+            province: owner.neighborhood ?? undefined,
+            city: owner.city ?? undefined,
+            state: owner.state ?? undefined,
           })
           asaasCustomerId = asaasCustomer.id
 
@@ -203,12 +203,12 @@ export async function POST(req: NextRequest) {
           cpfCnpj: owner.cpf.replace(/\D/g, ''),
           phone: owner.phone.replace(/\D/g, ''),
           postalCode: owner.cep?.replace(/\D/g, ''),
-          address: owner.street,
-          addressNumber: owner.number,
-          complement: owner.complement,
-          province: owner.neighborhood,
-          city: owner.city,
-          state: owner.state,
+          address: owner.street ?? undefined,
+          addressNumber: owner.number ?? undefined,
+          complement: owner.complement ?? undefined,
+          province: owner.neighborhood ?? undefined,
+          city: owner.city ?? undefined,
+          state: owner.state ?? undefined,
         })
         asaasCustomerId = asaasCustomer.id
 

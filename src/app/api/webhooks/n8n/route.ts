@@ -9,7 +9,7 @@ import { headers } from 'next/headers'
 export async function POST(req: Request) {
   try {
     // Verificar autenticação do webhook (opcional, mas recomendado)
-    const headersList = headers()
+    const headersList = await headers()
     const authHeader = headersList.get('authorization')
     const webhookSecret = process.env.N8N_WEBHOOK_SECRET
 
