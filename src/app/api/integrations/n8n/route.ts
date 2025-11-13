@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/authorization'
+import { n8nService } from '@/lib/n8n'
 
 // Conectar N8N
 export async function POST(req: Request) {
@@ -9,6 +10,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
   }
   const userId = (session.user as any)?.id
+  
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
   
   try {
     const { n8nUrl, n8nApiKey, webhookUrl } = await req.json()
@@ -59,7 +66,7 @@ export async function POST(req: Request) {
     const integration = await prisma.integration.upsert({
       where: {
         familyId_userId_provider: {
-          familyId,
+          familyId: validFamilyId,
           userId,
           provider: 'n8n',
         },
@@ -73,7 +80,7 @@ export async function POST(req: Request) {
         provider: 'n8n',
         accessToken: n8nApiKey,
         scope,
-        familyId,
+        familyId: validFamilyId,
         userId,
         isActive: true,
       },
@@ -97,11 +104,17 @@ export async function GET(req: Request) {
   }
   const userId = (session.user as any)?.id
   
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+  
   try {
     const integration = await prisma.integration.findUnique({
       where: {
         familyId_userId_provider: {
-          familyId,
+          familyId: validFamilyId,
           userId,
           provider: 'n8n',
         },
@@ -163,10 +176,16 @@ export async function DELETE(req: Request) {
   }
   const userId = (session.user as any)?.id
   
+  if (!familyId) {
+    return NextResponse.json({ status: 'error', message: 'Família não identificada' }, { status: 403 })
+  }
+
+  const validFamilyId: string = familyId
+  
   try {
     await prisma.integration.deleteMany({
       where: {
-        familyId,
+        familyId: validFamilyId,
         userId,
         provider: 'n8n',
       },
