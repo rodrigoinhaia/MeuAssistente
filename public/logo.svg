@@ -1,0 +1,43 @@
+<svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Design: Escudo com gráfico (proteção + crescimento) -->
+  <g>
+    <!-- Escudo estilizado -->
+    <path d="M 10 15 L 10 35 L 30 45 L 50 35 L 50 15 L 30 10 Z" 
+          fill="url(#gradientShield)" 
+          stroke="url(#gradientStroke)" 
+          stroke-width="2"/>
+    
+    <!-- Gráfico dentro do escudo -->
+    <path d="M 18 35 L 22 28 L 26 32 L 30 24 L 34 26 L 38 20 L 42 22" 
+          stroke="white" 
+          stroke-width="2.5" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" 
+          fill="none"/>
+    
+    <!-- Ponto destacado -->
+    <circle cx="42" cy="22" r="2.5" fill="white"/>
+  </g>
+  
+  <!-- Texto -->
+  <text x="60" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="800" fill="url(#gradientText)" letter-spacing="-0.5">
+    MeuAssistente
+  </text>
+  
+  <defs>
+    <linearGradient id="gradientShield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0891B2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradientText" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0F172A;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

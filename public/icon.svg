@@ -1,0 +1,23 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Favicon - Escudo simplificado -->
+  <rect width="32" height="32" rx="6" fill="url(#gradientBg)"/>
+  
+  <path d="M 8 10 L 8 22 L 16 26 L 24 22 L 24 10 L 16 6 Z" 
+        fill="white" 
+        opacity="0.9"/>
+  
+  <!-- Gráfico simples -->
+  <path d="M 10 20 L 12 17 L 14 19 L 16 15 L 18 16 L 20 13 L 22 14" 
+        stroke="url(#gradientBg)" 
+        stroke-width="1.5" 
+        stroke-linecap="round" 
+        fill="none"/>
+  
+  <defs>
+    <linearGradient id="gradientBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

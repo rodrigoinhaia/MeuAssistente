@@ -1,0 +1,34 @@
+<svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Design: Estrela/brilho (inteligência + destaque) -->
+  <g>
+    <!-- Círculo base -->
+    <circle cx="30" cy="30" r="20" fill="url(#gradientCircle)"/>
+    
+    <!-- Estrela de 5 pontas estilizada -->
+    <path d="M 30 15 L 32 22 L 39 22 L 33 27 L 35 34 L 30 30 L 25 34 L 27 27 L 21 22 L 28 22 Z" 
+          fill="white" 
+          opacity="0.95"/>
+    
+    <!-- Círculo central -->
+    <circle cx="30" cy="30" r="4" fill="url(#gradientCircle)"/>
+  </g>
+  
+  <!-- Texto -->
+  <text x="60" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="800" fill="url(#gradientText)" letter-spacing="-0.5">
+    MeuAssistente
+  </text>
+  
+  <defs>
+    <linearGradient id="gradientCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradientText" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0F172A;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
+

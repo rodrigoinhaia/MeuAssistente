@@ -1,0 +1,41 @@
+<svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Design: Monograma MA estilizado -->
+  <g>
+    <!-- Círculo base -->
+    <circle cx="30" cy="30" r="20" fill="url(#gradientCircle)"/>
+    
+    <!-- Letra M estilizada -->
+    <path d="M 18 20 L 18 35 L 24 28 L 30 35 L 30 20" 
+          stroke="white" 
+          stroke-width="3" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" 
+          fill="none"/>
+    
+    <!-- Letra A estilizada (dentro do M) -->
+    <path d="M 20 28 L 24 20 L 28 28 M 22 26 L 26 26" 
+          stroke="white" 
+          stroke-width="2.5" 
+          stroke-linecap="round" 
+          fill="none"/>
+  </g>
+  
+  <!-- Texto -->
+  <text x="60" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="800" fill="url(#gradientText)" letter-spacing="-0.5">
+    MeuAssistente
+  </text>
+  
+  <defs>
+    <linearGradient id="gradientCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradientText" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0F172A;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
+

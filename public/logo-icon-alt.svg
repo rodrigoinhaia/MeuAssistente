@@ -1,0 +1,32 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Versão alternativa - Design mais geométrico e moderno -->
+  <g>
+    <!-- Círculo principal -->
+    <circle cx="24" cy="24" r="20" fill="url(#gradientCircle)" stroke="url(#gradientStroke)" stroke-width="2"/>
+    
+    <!-- Formas geométricas representando organização -->
+    <rect x="16" y="16" width="6" height="6" rx="1" fill="white" opacity="0.9"/>
+    <rect x="24" y="16" width="6" height="6" rx="1" fill="white" opacity="0.9"/>
+    <rect x="16" y="24" width="6" height="6" rx="1" fill="white" opacity="0.9"/>
+    <rect x="24" y="24" width="6" height="6" rx="1" fill="white" opacity="0.9"/>
+    
+    <!-- Linha conectando (representa organização) -->
+    <path d="M 19 19 L 25 19 M 19 25 L 25 25 M 19 19 L 19 25 M 25 19 L 25 25" 
+          stroke="url(#gradientStroke)" 
+          stroke-width="1.5" 
+          stroke-opacity="0.3"/>
+  </g>
+  
+  <defs>
+    <linearGradient id="gradientCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0891B2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
+

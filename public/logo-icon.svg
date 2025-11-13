@@ -1,0 +1,28 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Escudo com gráfico -->
+  <path d="M 6 12 L 6 36 L 24 44 L 42 36 L 42 12 L 24 4 Z" 
+        fill="url(#gradientShield)" 
+        stroke="url(#gradientStroke)" 
+        stroke-width="2"/>
+  
+  <!-- Gráfico -->
+  <path d="M 12 32 L 16 26 L 20 30 L 24 22 L 28 24 L 32 18 L 36 20" 
+        stroke="white" 
+        stroke-width="3" 
+        stroke-linecap="round" 
+        fill="none"/>
+  
+  <circle cx="36" cy="20" r="3" fill="white"/>
+  
+  <defs>
+    <linearGradient id="gradientShield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0891B2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

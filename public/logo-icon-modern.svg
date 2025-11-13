@@ -1,0 +1,23 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Versão moderna minimalista -->
+  <circle cx="24" cy="24" r="20" fill="url(#gradientCircle)"/>
+  
+  <!-- Letra M estilizada -->
+  <path d="M 14 16 L 14 32 M 14 16 L 24 24 L 34 16 M 34 16 L 34 32" 
+        stroke="white" 
+        stroke-width="3.5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+  
+  <circle cx="24" cy="24" r="2.5" fill="white"/>
+  
+  <defs>
+    <linearGradient id="gradientCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
+

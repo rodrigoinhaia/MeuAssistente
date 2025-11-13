@@ -1,0 +1,16 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Estrela -->
+  <circle cx="24" cy="24" r="20" fill="url(#gradientCircle)"/>
+  <path d="M 24 10 L 26 18 L 34 18 L 27 23 L 29 31 L 24 26 L 19 31 L 21 23 L 14 18 L 22 18 Z" 
+        fill="white" 
+        opacity="0.95"/>
+  <circle cx="24" cy="24" r="4" fill="url(#gradientCircle)"/>
+  <defs>
+    <linearGradient id="gradientCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
+
