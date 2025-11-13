@@ -103,7 +103,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
     <aside className="w-64 min-h-screen bg-gradient-to-b from-slate-50 to-white border-r border-slate-200/60 flex flex-col shadow-lg">
       <div className="flex items-center h-16 px-6 border-b border-slate-200/60 bg-white/50 backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <img src="/logo-icon.svg" alt="MeuAssistente" className="w-8 h-8" />
+          <img src="/logo-meuassistente.png" alt="MeuAssistente" className="h-8 w-auto" />
           <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
             MeuAssistente
           </h1>

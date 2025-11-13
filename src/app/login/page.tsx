@@ -51,7 +51,7 @@ export default function LoginPage() {
       <div className="md:w-1/2 p-8 flex flex-col justify-center items-center">
         <div className="max-w-2xl">
           <div className="flex items-center gap-4 mb-6">
-            <img src="/logo-icon.svg" alt="MeuAssistente" className="w-16 h-16" />
+            <img src="/logo-meuassistente.png" alt="MeuAssistente" className="h-16 w-auto" />
             <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
               MeuAssistente
             </h1>
