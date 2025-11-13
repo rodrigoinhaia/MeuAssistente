@@ -354,7 +354,7 @@ export async function POST(request: NextRequest) {
         // Campos obrigatórios do schema - gerar valores temporários se não fornecidos
         cpf: body.cpf || `00000000000`, // CPF temporário - pode ser atualizado depois
         phone: body.phone || `00000000000`, // Telefone temporário - pode ser atualizado depois
-      },
+      } as any, // Type assertion temporária até o Prisma Client ser totalmente atualizado
       select: {
         id: true,
         name: true,

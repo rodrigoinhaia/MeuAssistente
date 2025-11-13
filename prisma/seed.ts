@@ -31,6 +31,7 @@ async function main() {
       role: UserRole.SUPER_ADMIN,
       familyId: superAdminFamily.id,
       isActive: true, // Garantir que está ativo
+      isVerified: true, // Usuários de seed já estão verificados
     },
   })
   console.log(`Created SUPER_ADMIN user: ${superAdmin.email}`)
@@ -56,6 +57,7 @@ async function main() {
       role: UserRole.OWNER,
       familyId: ownerFamily.id,
       isActive: true, // Garantir que está ativo
+      isVerified: true, // Usuários de seed já estão verificados
     },
   })
   console.log(`Created OWNER user: ${owner.email}`)
@@ -71,6 +73,7 @@ async function main() {
       role: UserRole.USER,
       familyId: ownerFamily.id,
       isActive: true, // Garantir que está ativo
+      isVerified: true, // Usuários de seed já estão verificados
     },
   })
   console.log(`Created USER user: ${commonUser.email}`)

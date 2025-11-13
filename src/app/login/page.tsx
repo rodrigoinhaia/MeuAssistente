@@ -28,14 +28,28 @@ export default function LoginPage() {
       
       if (res?.error) {
         console.error('Auth Error:', res.error)
-        setError(res.error)
+        
+        // Se o erro for sobre verificação, redirecionar para página de verificação
+        if (res.error.includes('verificado') || res.error.includes('verificação')) {
+          setError('Você precisa verificar seu WhatsApp antes de acessar o sistema.')
+          setTimeout(() => {
+            router.push('/verify')
+          }, 2000)
+        } else {
+          setError(res.error)
+        }
       } else {
         const session = await getSession()
         console.log('Session:', session)
         
-        const role = (session?.user as any)?.role
-        // Redirecionar para o dashboard principal
-        router.push('/dashboard')
+        // Verificar se está verificado antes de redirecionar
+        const isVerified = (session?.user as any)?.isVerified !== false
+        
+        if (!isVerified) {
+          router.push('/verify')
+        } else {
+          router.push('/dashboard')
+        }
       }
     } catch (error) {
       console.error('Login Error:', error)

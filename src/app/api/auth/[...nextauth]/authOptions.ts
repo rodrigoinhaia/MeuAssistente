@@ -126,12 +126,12 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async session({ session, token }: { session: Session; token: JWT }) {
       if (token && session.user) {
-        session.user = {
+        (session.user as any) = {
           ...session.user,
           id: token.id as string,
           familyId: token.familyId as string,
           role: token.role as string,
-          isVerified: token.isVerified as boolean,
+          isVerified: token.isVerified as boolean ?? true, // Default true para compatibilidade
         }
       }
       console.log('[AUTH_SESSION] Session callback:', {
