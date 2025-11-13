@@ -27,9 +27,13 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    const whereClause: { familyId?: string } = (role === 'SUPER_ADMIN' && context === 'admin') 
+    // SEGURANÇA: Nunca usar {} quando não for modo admin - sempre filtrar por familyId
+    // Se familyId for null (mesmo após validação), usar filtro que retorna vazio
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
       ? {} 
-      : { familyId: familyId! }
+      : familyId 
+        ? { familyId } 
+        : { familyId: { in: [] } } // Filtro seguro que retorna zero resultados
     
     const subscriptions = await prisma.subscription.findMany({
       where: whereClause,
