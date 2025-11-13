@@ -131,7 +131,7 @@ async function getTop3Categories(
     for (const transaction of transactions) {
       if (transaction.category) {
         const current = categoryMap.get(transaction.category.name) || 0
-        categoryMap.set(transaction.category.name, current + transaction.amount)
+        categoryMap.set(transaction.category.name, current + Number(transaction.amount))
       }
     }
 
