@@ -15,7 +15,17 @@ export async function GET(req: Request) {
     // SUPER_ADMIN em modo admin: retorna dados agregados de todas as famílias (relatórios de negócio)
     // SUPER_ADMIN em modo família: retorna dados da sua família (comporta-se como OWNER)
     // OUTROS ROLES: retorna dados apenas da família do usuário
-    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : (familyId ? { familyId } : {})
+    // SEGURANÇA: Se não estiver no modo admin, familyId é obrigatório
+    if (role !== 'SUPER_ADMIN' || context !== 'admin') {
+      if (!familyId) {
+        return NextResponse.json(
+          { status: 'error', message: 'FamilyId é obrigatório para este contexto' },
+          { status: 400 }
+        )
+      }
+    }
+    
+    const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') ? {} : { familyId }
 
     // Receita total (soma de todas as assinaturas ativas)
     const activeSubscriptions = await prisma.subscription.findMany({
@@ -42,7 +52,7 @@ export async function GET(req: Request) {
 
     // Total de famílias (clientes)
     const totalFamilies = await prisma.family.count({
-      where: role === 'SUPER_ADMIN' && context === 'admin' ? {} : (familyId ? { id: familyId } : {}),
+      where: role === 'SUPER_ADMIN' && context === 'admin' ? {} : { id: familyId! },
     })
 
     // Receita mensal dos últimos 6 meses

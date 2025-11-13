@@ -18,9 +18,19 @@ export async function GET(request: NextRequest) {
     
     // SUPER_ADMIN em modo admin vê todos os pagamentos
     // SUPER_ADMIN em modo família e OWNER vê apenas pagamentos da sua família
+    // SEGURANÇA: Se não estiver no modo admin, familyId é obrigatório
+    if (role !== 'SUPER_ADMIN' || context !== 'admin') {
+      if (!familyId) {
+        return NextResponse.json(
+          { error: 'FamilyId é obrigatório para este contexto' },
+          { status: 400 }
+        )
+      }
+    }
+    
     const whereClause = (role === 'SUPER_ADMIN' && context === 'admin') 
       ? {} 
-      : familyId ? { familyId } : {}
+      : { familyId }
 
     const payments = await prisma.payment.findMany({
       where: whereClause,

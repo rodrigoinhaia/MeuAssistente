@@ -1,4 +1,4 @@
-import { parseString } from 'ofx-parser'
+import ofxParser from 'ofx-parser'
 import csv from 'csv-parser'
 import { Readable } from 'stream'
 
@@ -15,7 +15,7 @@ export interface ParsedTransaction {
  */
 export async function parseOFX(fileContent: string): Promise<ParsedTransaction[]> {
   try {
-    const ofxData = parseString(fileContent)
+    const ofxData = ofxParser.parseString(fileContent)
     const transactions: ParsedTransaction[] = []
 
     // OFX pode ter múltiplas contas
