@@ -6,8 +6,29 @@ import { prisma } from '@/lib/db'
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await getServerSession(authOptions)
-  if (!session || !session.user || ((session.user as any).role !== 'OWNER' && (session.user as any).role !== 'ADMIN')) {
+  const userRole = (session?.user as any)?.role
+  
+  // Apenas SUPER_ADMIN em modo admin pode ver usuários de qualquer família
+  // OWNER pode ver usuários da sua própria família
+  if (!session || !session.user) {
     return NextResponse.json({ status: 'error', message: 'Acesso restrito.' }, { status: 403 })
+  }
+  
+  // Verificar se é SUPER_ADMIN em modo admin
+  const contextHeader = req.headers.get('x-admin-context')
+  const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
+  const isSuperAdminInAdminMode = userRole === 'SUPER_ADMIN' && adminContext === 'admin'
+  
+  // Se não for SUPER_ADMIN em modo admin, verificar se é OWNER da família
+  if (!isSuperAdminInAdminMode) {
+    if (userRole !== 'OWNER') {
+      return NextResponse.json({ status: 'error', message: 'Acesso restrito.' }, { status: 403 })
+    }
+    // Verificar se a família pertence ao usuário
+    const userFamilyId = (session.user as any)?.familyId
+    if (userFamilyId !== id) {
+      return NextResponse.json({ status: 'error', message: 'Acesso restrito a esta família.' }, { status: 403 })
+    }
   }
   try {
     const users = await prisma.user.findMany({

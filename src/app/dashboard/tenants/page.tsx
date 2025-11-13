@@ -14,6 +14,14 @@ interface Family {
   createdAt: string
 }
 
+interface FamilyUser {
+  id: string
+  name: string
+  email: string
+  role: 'OWNER' | 'SUPER_ADMIN' | 'USER'
+  isActive: boolean
+}
+
 const planLabels: Record<string, string> = {
   basic: 'Básico',
   premium: 'Premium',
@@ -29,6 +37,8 @@ export default function FamiliesPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editFamily, setEditFamily] = useState<Family | null>(null)
+  const [familyUsers, setFamilyUsers] = useState<FamilyUser[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
   const [filter, setFilter] = useState('')
 
   async function fetchFamilies() {
@@ -125,6 +135,7 @@ export default function FamiliesPage() {
       if (res.data.status === 'ok') {
         setSuccess('Família atualizada!')
         setEditFamily(null)
+        setFamilyUsers([])
         fetchFamilies()
       } else {
         setError(res.data.message || 'Erro ao atualizar família')
@@ -248,7 +259,21 @@ export default function FamiliesPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => setEditFamily(family)}
+                            onClick={async () => {
+                              setEditFamily(family)
+                              // Buscar usuários da família
+                              setLoadingUsers(true)
+                              try {
+                                const res = await apiClient.get(`/tenants/${family.id}/users`)
+                                if (res.data.status === 'ok') {
+                                  setFamilyUsers(res.data.users || [])
+                                }
+                              } catch (err) {
+                                console.error('Erro ao buscar usuários:', err)
+                                setFamilyUsers([])
+                              }
+                              setLoadingUsers(false)
+                            }}
                             className="p-2 rounded-lg hover:bg-cyan-50 text-cyan-600 transition-colors border border-transparent hover:border-cyan-200"
                             title="Editar"
                           >
@@ -286,7 +311,7 @@ export default function FamiliesPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form
             onSubmit={handleEditSubmit}
-            className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60 space-y-6"
+            className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl border border-slate-200/60 space-y-6 max-h-[90vh] overflow-y-auto"
           >
             <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent">
               Editar Família
@@ -332,10 +357,107 @@ export default function FamiliesPage() {
               </div>
             </div>
 
+            {/* Seção de Usuários */}
+            <div className="border-t border-slate-200 pt-6 mt-6">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">Usuários da Família</h3>
+              {loadingUsers ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : familyUsers.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">Nenhum usuário encontrado</p>
+              ) : (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {familyUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-slate-800 truncate">{user.name}</p>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            user.role === 'OWNER'
+                              ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                              : user.role === 'SUPER_ADMIN'
+                              ? 'bg-cyan-100 text-cyan-700 border border-cyan-200'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200'
+                          }`}>
+                            {user.role === 'OWNER' ? 'Proprietário' : user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Usuário'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            user.isActive
+                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                              : 'bg-red-100 text-red-700 border border-red-200'
+                          }`}>
+                            {user.isActive ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600 truncate">{user.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        {user.role !== 'OWNER' && (
+                          <>
+                            <select
+                              value={user.role}
+                              onChange={async (e) => {
+                                try {
+                                  await apiClient.patch('/users', {
+                                    userId: user.id,
+                                    role: e.target.value,
+                                  })
+                                  setFamilyUsers(prev => prev.map(u => 
+                                    u.id === user.id ? { ...u, role: e.target.value as any } : u
+                                  ))
+                                  setSuccess('Papel do usuário atualizado!')
+                                } catch (err: any) {
+                                  setError(err.response?.data?.error || 'Erro ao atualizar papel')
+                                }
+                              }}
+                              className="px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-cyan-500"
+                            >
+                              <option value="USER">Usuário</option>
+                              <option value="SUPER_ADMIN">Super Admin</option>
+                            </select>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await apiClient.patch('/users', {
+                                    userId: user.id,
+                                    isActive: !user.isActive,
+                                  })
+                                  setFamilyUsers(prev => prev.map(u => 
+                                    u.id === user.id ? { ...u, isActive: !u.isActive } : u
+                                  ))
+                                  setSuccess(`Usuário ${!user.isActive ? 'ativado' : 'desativado'}!`)
+                                } catch (err: any) {
+                                  setError(err.response?.data?.error || 'Erro ao atualizar status')
+                                }
+                              }}
+                              className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
+                                user.isActive
+                                  ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                                  : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200'
+                              }`}
+                            >
+                              {user.isActive ? 'Desativar' : 'Ativar'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-3 mt-8">
               <button
                 type="button"
-                onClick={() => setEditFamily(null)}
+                onClick={() => {
+                  setEditFamily(null)
+                  setFamilyUsers([])
+                }}
                 className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
               >
                 Cancelar
