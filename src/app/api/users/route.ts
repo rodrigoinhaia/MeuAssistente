@@ -163,6 +163,15 @@ export async function PATCH(request: NextRequest) {
     
     const { role: userRole, familyId, adminContext: context } = authResult;
     
+    console.log('[USERS_PATCH] Dados da requisição:', {
+      userRole,
+      familyId,
+      context,
+      userId,
+      role,
+      isActive,
+    });
+    
     // Fetch the user to be updated to check their current role and family
     const userToUpdate = await prisma.user.findUnique({
         where: {
@@ -174,21 +183,56 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
     }
 
+    console.log('[USERS_PATCH] Usuário a ser atualizado:', {
+      id: userToUpdate.id,
+      email: userToUpdate.email,
+      role: userToUpdate.role,
+      familyId: userToUpdate.familyId,
+      isActive: userToUpdate.isActive,
+    });
+
     // SUPER_ADMIN em modo admin pode editar qualquer usuário (configurações globais)
     // SUPER_ADMIN em modo família só pode editar usuários da sua família (comporta-se como OWNER)
+    // OWNER só pode editar usuários da sua família
     if (userRole === 'SUPER_ADMIN' && context === 'admin') {
       // Pode editar qualquer usuário
-    } else if (userToUpdate.familyId !== familyId) {
-      return NextResponse.json({ error: 'Usuário não pertence a esta família.' }, { status: 403 });
+      console.log('[USERS_PATCH] SUPER_ADMIN em modo admin - permitindo edição de qualquer usuário');
+    } else {
+      // Verificar se o usuário pertence à mesma família
+      if (!familyId) {
+        console.error('[USERS_PATCH] FamilyId não encontrado para validação');
+        return NextResponse.json({ 
+          error: 'FamilyId não encontrado. Não é possível validar permissão.' 
+        }, { status: 400 });
+      }
+      
+      if (userToUpdate.familyId !== familyId) {
+        console.error('[USERS_PATCH] Usuário não pertence à família:', {
+          userFamilyId: userToUpdate.familyId,
+          currentFamilyId: familyId,
+        });
+        return NextResponse.json({ 
+          error: 'Usuário não pertence a esta família.' 
+        }, { status: 403 });
+      }
+      
+      console.log('[USERS_PATCH] Validação de família passou');
     }
 
     // Security validations
+    console.log('[USERS_PATCH] Validando restrições de segurança...');
+    
     if (userToUpdate.role === 'OWNER') {
+        console.error('[USERS_PATCH] Tentativa de editar OWNER bloqueada');
         return NextResponse.json({ error: 'O papel de OWNER não pode ser alterado.' }, { status: 403 });
     }
+    
     if (userToUpdate.id === session?.user?.id) {
+        console.error('[USERS_PATCH] Tentativa de editar próprio usuário bloqueada');
         return NextResponse.json({ error: 'Você não pode alterar seu próprio papel ou status.' }, { status: 403 });
     }
+    
+    console.log('[USERS_PATCH] Todas as validações passaram, atualizando usuário...');
 
     const updatedUser = await prisma.user.update({
       where: {
