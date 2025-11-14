@@ -19,6 +19,12 @@ export async function POST(req: Request) {
 
     const testMessage = message || `🧪 *Teste MeuAssistente*\n\nEsta é uma mensagem de teste enviada em ${new Date().toLocaleString('pt-BR')}.\n\nSe você recebeu esta mensagem, o sistema está funcionando corretamente! ✅`
 
+    // Normalizar número para teste
+    let normalizedPhone = phoneNumber.replace(/\D/g, '')
+    const phoneWithoutCountryCode = normalizedPhone.startsWith('55') 
+      ? normalizedPhone.substring(2) 
+      : normalizedPhone
+
     // Verificar variáveis de ambiente
     const evolutionApiUrl = process.env.EVOLUTION_API_URL
     const evolutionApiKey = process.env.EVOLUTION_API_KEY
@@ -32,8 +38,11 @@ export async function POST(req: Request) {
 
     console.log('[TEST_WHATSAPP] Iniciando teste de envio...')
     console.log('[TEST_WHATSAPP] Configuração:', config)
-    console.log('[TEST_WHATSAPP] Número:', phoneNumber)
+    console.log('[TEST_WHATSAPP] Número original:', phoneNumber)
+    console.log('[TEST_WHATSAPP] Número com código do país (55):', normalizedPhone)
+    console.log('[TEST_WHATSAPP] Número sem código do país:', phoneWithoutCountryCode)
     console.log('[TEST_WHATSAPP] Mensagem:', testMessage.substring(0, 100))
+    console.log('[TEST_WHATSAPP] O sistema tentará ambos os formatos automaticamente')
 
     try {
       const result = await sendWhatsAppMessage({
