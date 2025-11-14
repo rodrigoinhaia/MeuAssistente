@@ -33,6 +33,12 @@ export async function createAndSendOTP(userId: string, phone: string): Promise<s
 
   // Salvar no banco
   try {
+    console.log(`[OTP] Tentando salvar código no banco...`, {
+      userId,
+      phone,
+      codeLength: code.length,
+    })
+    
     await prisma.oTPVerification.create({
       data: {
         userId,
@@ -42,33 +48,76 @@ export async function createAndSendOTP(userId: string, phone: string): Promise<s
         verified: false,
       },
     })
-    console.log(`[OTP] Código ${code} salvo no banco para ${phone}`)
+    console.log(`[OTP] ✅ Código ${code} salvo no banco para ${phone}`)
   } catch (dbError: any) {
-    console.error(`[OTP] Erro ao salvar código no banco:`, dbError)
+    console.error(`[OTP] ❌ Erro ao salvar código no banco:`, {
+      message: dbError.message,
+      code: dbError.code,
+      meta: dbError.meta,
+      stack: dbError.stack,
+      userId,
+      phone,
+    })
+    
+    // Se for erro de constraint única (código duplicado), tentar novamente
+    if (dbError.code === 'P2002') {
+      console.log(`[OTP] Código duplicado detectado, gerando novo código...`)
+      const newCode = generateOTP()
+      try {
+        await prisma.oTPVerification.create({
+          data: {
+            userId,
+            code: newCode,
+            phone,
+            expiresAt,
+            verified: false,
+          },
+        })
+        console.log(`[OTP] ✅ Novo código ${newCode} salvo após retry`)
+        // Continuar com o novo código
+        return await sendOTPMessage(newCode, phone)
+      } catch (retryError: any) {
+        console.error(`[OTP] ❌ Erro no retry:`, retryError)
+        throw new Error(`Erro ao salvar código OTP após retry: ${retryError.message}`)
+      }
+    }
+    
     throw new Error(`Erro ao salvar código OTP: ${dbError.message}`)
   }
 
   // Enviar via WhatsApp
+  return await sendOTPMessage(code, phone)
+}
+
+/**
+ * Função auxiliar para enviar mensagem OTP
+ */
+async function sendOTPMessage(code: string, phone: string): Promise<string> {
   const message = `🔐 *Código de Verificação MeuAssistente*\n\nSeu código de verificação é: *${code}*\n\nEste código expira em 10 minutos.\n\nSe você não solicitou este código, ignore esta mensagem.`
   
   try {
-    console.log(`[OTP] Tentando enviar mensagem para ${phone}...`)
+    console.log(`[OTP] 📱 Tentando enviar mensagem para ${phone}...`)
     const sent = await sendWhatsAppMessage({
       phoneNumber: phone,
       message,
     })
     
     if (!sent) {
+      console.error(`[OTP] ❌ sendWhatsAppMessage retornou false para ${phone}`)
       throw new Error('Falha ao enviar mensagem via WhatsApp (retornou false)')
     }
     
     console.log(`[OTP] ✅ Código ${code} gerado e enviado para ${phone}`)
+    return code
   } catch (error: any) {
     console.error(`[OTP] ❌ Erro ao enviar código para ${phone}:`, {
       message: error.message,
       stack: error.stack,
+      name: error.name,
+      code: error.code,
       phone,
-      phoneDigits: phoneDigits.length,
+      phoneDigits: phone.replace(/\D/g, '').length,
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error)),
     })
     
     // Não remover o código do banco - usuário pode tentar verificar mesmo se o envio falhou
@@ -76,8 +125,6 @@ export async function createAndSendOTP(userId: string, phone: string): Promise<s
     
     throw new Error(`Não foi possível enviar o código OTP: ${error.message}`)
   }
-
-  return code
 }
 
 /**
