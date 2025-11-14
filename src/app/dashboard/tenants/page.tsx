@@ -5,6 +5,7 @@ import apiClient from '@/lib/axios-config'
 import { useSession } from 'next-auth/react'
 import { useAdminContext } from '@/hooks/useAdminContext'
 import { RiUserAddLine } from 'react-icons/ri'
+import CountryCodeSelect, { extractCountryCode, combinePhoneNumber } from '@/app/components/CountryCodeSelect'
 
 interface Family {
   id: string
@@ -38,6 +39,7 @@ export default function FamiliesPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editFamily, setEditFamily] = useState<Family | null>(null)
+  const [familyCountryCode, setFamilyCountryCode] = useState('+55')
   const [familyUsers, setFamilyUsers] = useState<FamilyUser[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [filter, setFilter] = useState('')
@@ -132,7 +134,12 @@ export default function FamiliesPage() {
     setSuccess('')
     if (!editFamily) return
     try {
-      const res = await apiClient.patch('/tenants', editFamily)
+      // Combinar código do país com número antes de enviar
+      const phoneNumberWithCode = combinePhoneNumber(familyCountryCode, editFamily.phoneNumber)
+      const res = await apiClient.patch('/tenants', {
+        ...editFamily,
+        phoneNumber: phoneNumberWithCode,
+      })
       if (res.data.status === 'ok') {
         setSuccess('Família atualizada!')
         setEditFamily(null)
@@ -261,7 +268,13 @@ export default function FamiliesPage() {
                         <div className="flex items-center gap-2">
                           <button 
                             onClick={async () => {
-                              setEditFamily(family)
+                              // Extrair código do país do número existente
+                              const phoneData = family.phoneNumber ? extractCountryCode(family.phoneNumber) : { code: '+55', number: '' }
+                              setEditFamily({
+                                ...family,
+                                phoneNumber: phoneData.number
+                              })
+                              setFamilyCountryCode(phoneData.code)
                               // Buscar usuários da família
                               setLoadingUsers(true)
                               try {

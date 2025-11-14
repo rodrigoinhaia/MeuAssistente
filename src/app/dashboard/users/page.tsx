@@ -23,6 +23,7 @@ import {
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import OTPVerificationModal from '@/app/components/OTPVerificationModal'
+import CountryCodeSelect, { extractCountryCode, combinePhoneNumber } from '@/app/components/CountryCodeSelect'
 
 interface User {
   id: string
@@ -48,6 +49,7 @@ export default function UsersPage() {
   const [editModal, setEditModal] = useState<{ userId: string; userName: string; userEmail: string; userPhone?: string } | null>(null)
   const [otpModal, setOtpModal] = useState<{ userId: string; userName: string; phone?: string } | null>(null)
   const [editUser, setEditUser] = useState({ name: '', email: '', phone: '' })
+  const [countryCode, setCountryCode] = useState('+55')
   const [editing, setEditing] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -119,31 +121,6 @@ export default function UsersPage() {
     }
   }
 
-  function normalizePhoneNumber(phone: string): string {
-    // Remove todos os caracteres não numéricos
-    const digits = phone.replace(/\D/g, '')
-    
-    // Se já começa com 55, retorna como está
-    if (digits.startsWith('55') && digits.length >= 12) {
-      return digits
-    }
-    
-    // Se começa com 0, remove o 0
-    const withoutLeadingZero = digits.startsWith('0') ? digits.substring(1) : digits
-    
-    // Se tem 10 ou 11 dígitos (DDD + número), adiciona 55
-    if (withoutLeadingZero.length >= 10 && withoutLeadingZero.length <= 11) {
-      return `55${withoutLeadingZero}`
-    }
-    
-    // Se já tem 12+ dígitos sem 55, assume que está completo
-    if (withoutLeadingZero.length >= 12) {
-      return withoutLeadingZero
-    }
-    
-    // Retorna o número normalizado
-    return withoutLeadingZero
-  }
 
   async function handleEditUser() {
     if (!editModal) return
@@ -167,13 +144,15 @@ export default function UsersPage() {
       return
     }
 
-    // Normalizar telefone se fornecido
+    // Combinar código do país com número
     let normalizedPhone = editUser.phone.trim()
     if (normalizedPhone) {
-      normalizedPhone = normalizePhoneNumber(normalizedPhone)
+      // Combinar código do país com número
+      normalizedPhone = combinePhoneNumber(countryCode, normalizedPhone)
       
-      // Validar formato final (deve ter pelo menos 12 dígitos com código do país)
-      if (normalizedPhone.length < 12) {
+      // Validar formato final
+      const digits = normalizedPhone.replace(/\D/g, '')
+      if (digits.length < 10) {
         setError('Número de WhatsApp inválido. Deve incluir DDD e número.')
         return
       }
@@ -621,19 +600,22 @@ export default function UsersPage() {
                   {canEditStatus && (
                     <>
                       <button
-                        onClick={() => {
-                          setEditModal({ 
-                            userId: user.id, 
-                            userName: user.name, 
-                            userEmail: user.email,
-                            userPhone: user.phone 
-                          })
-                          setEditUser({ 
-                            name: user.name, 
-                            email: user.email,
-                            phone: user.phone || ''
-                          })
-                        }}
+            onClick={() => {
+              // Extrair código do país do número existente
+              const phoneData = user.phone ? extractCountryCode(user.phone) : { code: '+55', number: '' }
+              setEditModal({
+                userId: user.id,
+                userName: user.name,
+                userEmail: user.email,
+                userPhone: user.phone
+              })
+              setEditUser({
+                name: user.name,
+                email: user.email,
+                phone: phoneData.number
+              })
+              setCountryCode(phoneData.code)
+            }}
                         className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors"
                         title="Editar usuário"
                       >
@@ -720,15 +702,23 @@ export default function UsersPage() {
                   <RiWhatsappLine className="w-4 h-4 text-emerald-600" />
                   WhatsApp
                 </label>
-                <input
-                  type="tel"
-                  value={editUser.phone}
-                  onChange={(e) => setEditUser({ ...editUser, phone: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
-                  placeholder="(11) 99999-9999 ou 11999999999"
-                />
+                <div className="flex gap-2">
+                  <div className="w-48">
+                    <CountryCodeSelect
+                      value={countryCode}
+                      onChange={setCountryCode}
+                    />
+                  </div>
+                  <input
+                    type="tel"
+                    value={editUser.phone}
+                    onChange={(e) => setEditUser({ ...editUser, phone: e.target.value })}
+                    className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                    placeholder="(11) 99999-9999 ou 11999999999"
+                  />
+                </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  O código do país (55) será adicionado automaticamente se necessário
+                  Digite apenas o DDD e número (sem código do país)
                 </p>
               </div>
             </div>
@@ -739,6 +729,7 @@ export default function UsersPage() {
                 onClick={() => {
                   setEditModal(null)
                   setEditUser({ name: '', email: '', phone: '' })
+                  setCountryCode('+55')
                   setError('')
                   setSuccess('')
                 }}

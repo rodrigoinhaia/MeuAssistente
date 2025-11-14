@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { RiLockPasswordLine, RiUserLine, RiMapPinLine } from 'react-icons/ri'
 import { HiOutlineMail, HiOutlineIdentification } from 'react-icons/hi'
+import CountryCodeSelect, { combinePhoneNumber } from '@/app/components/CountryCodeSelect'
 import { FaWhatsapp } from 'react-icons/fa'
 
 export default function RegisterPage(): ReactElement {
@@ -16,6 +17,7 @@ export default function RegisterPage(): ReactElement {
     password: '',
     cpf: '',
     phone: '',
+    countryCode: '+55',
     whatsappCode: '',
     whatsappVerified: false,
     cep: '',
@@ -88,7 +90,7 @@ export default function RegisterPage(): ReactElement {
     setCodeSuccess('')
     try {
       const res = await axios.post('/api/auth/send-whatsapp-code', {
-        phone: form.phone,
+        phone: combinePhoneNumber(form.countryCode, form.phone),
       })
       if (res.data.status === 'ok') {
         setCodeSent(true)
@@ -107,7 +109,7 @@ export default function RegisterPage(): ReactElement {
     setCodeSuccess('')
     try {
       const res = await axios.post('/api/auth/verify-whatsapp-code', {
-        phone: form.phone,
+        phone: combinePhoneNumber(form.countryCode, form.phone),
         code: form.whatsappCode,
       })
       if (res.data.status === 'ok') {
@@ -172,8 +174,8 @@ export default function RegisterPage(): ReactElement {
         email: form.email,
         password: form.password,
         cpf: form.cpf,
-        phoneNumber: form.phone, // Backend espera phoneNumber
-        phone: form.phone,
+        phoneNumber: combinePhoneNumber(form.countryCode, form.phone), // Combinar código do país com número
+        phone: combinePhoneNumber(form.countryCode, form.phone),
         familyName: form.name,
         planId: selectedPlanId, // ID do plano escolhido
         address: {
@@ -385,6 +387,13 @@ export default function RegisterPage(): ReactElement {
                   <div className="space-y-2">
                     <label className="text-white text-sm font-medium block">WhatsApp</label>
                     <div className="flex gap-2">
+                      <div className="w-48">
+                        <CountryCodeSelect
+                          value={form.countryCode}
+                          onChange={(code) => setForm({ ...form, countryCode: code })}
+                          className="bg-white/5 border-gray-600 text-white"
+                        />
+                      </div>
                       <div className="relative flex-1">
                         <FaWhatsapp className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                         <input
@@ -395,6 +404,7 @@ export default function RegisterPage(): ReactElement {
                           className="w-full bg-white/5 border border-gray-600 text-white px-10 py-3 rounded-lg focus:outline-none focus:border-cyan-400 transition-colors"
                           required
                           disabled={form.whatsappVerified}
+                          placeholder="(11) 99999-9999"
                         />
                       </div>
                       <button
