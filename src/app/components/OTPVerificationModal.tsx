@@ -140,7 +140,7 @@ export default function OTPVerificationModal({
         }
       } else {
         // Usuário autenticado reenviando para si mesmo
-        const res = await apiClient.post('/auth/resend-otp')
+        const res = await apiClient.post('/auth/resend-otp', {})
         if (res.data.status === 'ok') {
           setSuccess('Novo código enviado para o WhatsApp!')
         } else {

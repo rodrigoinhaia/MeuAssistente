@@ -1,62 +1,69 @@
 /**
- * Script de teste para envio de mensagem via WhatsApp
- * Uso: npx tsx scripts/test-whatsapp-send.ts
+ * Script de teste direto para enviar mensagem no WhatsApp
+ * Testa o envio sem passar pela API
  */
 
 import { sendWhatsAppMessage } from '../src/lib/whatsapp/send-message'
 
 async function testWhatsAppSend() {
-  console.log('🧪 Testando envio de mensagem via WhatsApp...\n')
+  console.log('🧪 Testando envio de mensagem WhatsApp\n')
+  console.log('='.repeat(60))
 
-  // Verificar variáveis de ambiente
-  const evolutionApiUrl = process.env.EVOLUTION_API_URL
-  const evolutionApiKey = process.env.EVOLUTION_API_KEY
-  const evolutionInstance = process.env.EVOLUTION_INSTANCE_NAME
+  // Número de teste (use um número válido)
+  const testPhone = process.env.TEST_PHONE || '5551981196315'
+  const testMessage = '🧪 *Teste de Envio WhatsApp*\n\nEsta é uma mensagem de teste do MeuAssistente.\n\nSe você recebeu esta mensagem, o sistema está funcionando! ✅'
 
-  console.log('📋 Configuração:')
-  console.log(`   EVOLUTION_API_URL: ${evolutionApiUrl ? '✅ Configurado' : '❌ Não configurado'}`)
-  console.log(`   EVOLUTION_API_KEY: ${evolutionApiKey ? '✅ Configurado' : '❌ Não configurado'}`)
-  console.log(`   EVOLUTION_INSTANCE_NAME: ${evolutionInstance ? '✅ Configurado' : '❌ Não configurado'}\n`)
-
-  if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance) {
-    console.error('❌ Erro: Variáveis de ambiente não configuradas!')
-    console.log('\n📝 Configure as seguintes variáveis no arquivo .env:')
-    console.log('   EVOLUTION_API_URL=https://sua-api-evolution.com')
-    console.log('   EVOLUTION_API_KEY=sua-chave-api')
-    console.log('   EVOLUTION_INSTANCE_NAME=nome-da-instancia')
-    process.exit(1)
-  }
-
-  // Número de teste
-  const testPhone = '51920014708'
-  const testMessage = `🧪 *Teste MeuAssistente*\n\nEsta é uma mensagem de teste enviada em ${new Date().toLocaleString('pt-BR')}.\n\nSe você recebeu esta mensagem, o sistema está funcionando corretamente! ✅`
-
-  console.log('📤 Enviando mensagem de teste...')
-  console.log(`   Para: ${testPhone}`)
-  console.log(`   Mensagem: ${testMessage.substring(0, 50)}...\n`)
+  console.log('📱 Configuração:')
+  console.log(`   Telefone: ${testPhone}`)
+  console.log(`   EVOLUTION_API_URL: ${process.env.EVOLUTION_API_URL ? '✅ Configurado' : '❌ Não configurado'}`)
+  console.log(`   EVOLUTION_API_KEY: ${process.env.EVOLUTION_API_KEY ? '✅ Configurado' : '❌ Não configurado'}`)
+  console.log(`   EVOLUTION_INSTANCE_NAME: ${process.env.EVOLUTION_INSTANCE_NAME ? '✅ Configurado' : '❌ Não configurado'}`)
+  console.log(`   N8N_WEBHOOK_URL: ${process.env.N8N_WEBHOOK_URL ? '✅ Configurado' : '❌ Não configurado'}`)
+  console.log('')
 
   try {
+    console.log('📤 Enviando mensagem...')
+    const startTime = Date.now()
+    
     const result = await sendWhatsAppMessage({
       phoneNumber: testPhone,
       message: testMessage,
     })
-
+    
+    const duration = Date.now() - startTime
+    
     if (result) {
-      console.log('✅ Mensagem enviada com sucesso!')
-      console.log('\n📱 Verifique o WhatsApp do número:', testPhone)
+      console.log(`\n✅ Mensagem enviada com sucesso! (${duration}ms)`)
+      console.log(`   Telefone: ${testPhone}`)
+      console.log(`   Mensagem: ${testMessage.substring(0, 50)}...`)
     } else {
-      console.error('❌ Falha ao enviar mensagem')
-      console.log('\n🔍 Possíveis causas:')
-      console.log('   1. Instância do Evolution API não está conectada')
-      console.log('   2. Número não está registrado na instância')
-      console.log('   3. Erro na configuração da API')
-      console.log('   4. Verifique os logs do Evolution API')
+      console.log(`\n❌ Falha ao enviar mensagem (retornou false)`)
+      console.log(`   Tempo decorrido: ${duration}ms`)
     }
+    
   } catch (error: any) {
-    console.error('❌ Erro ao enviar mensagem:', error.message)
-    console.error('\n📋 Detalhes do erro:')
-    console.error(error)
+    console.error('\n❌ Erro ao enviar mensagem:')
+    console.error('   Mensagem:', error.message)
+    console.error('   Stack:', error.stack)
+    console.error('   Tipo:', error.name)
+    console.error('   Código:', error.code)
+    
+    if (error.response) {
+      console.error('\n📡 Detalhes da resposta HTTP:')
+      console.error('   Status:', error.response.status)
+      console.error('   Status Text:', error.response.statusText)
+      console.error('   Data:', JSON.stringify(error.response.data, null, 2))
+    }
+    
+    if (error.request) {
+      console.error('\n📡 Detalhes da requisição:')
+      console.error('   URL:', error.config?.url)
+      console.error('   Method:', error.config?.method)
+      console.error('   Headers:', JSON.stringify(error.config?.headers, null, 2))
+    }
   }
+  
+  console.log('\n' + '='.repeat(60))
 }
 
 testWhatsAppSend()
@@ -68,4 +75,3 @@ testWhatsAppSend()
     console.error('\n❌ Erro fatal:', error)
     process.exit(1)
   })
-

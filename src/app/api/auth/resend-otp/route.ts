@@ -9,18 +9,20 @@ import { createAndSendOTP } from '@/lib/otp'
  */
 export async function POST(req: Request) {
   try {
-    let body: any
+    let body: any = {}
     try {
-      body = await req.json()
+      // Tentar fazer parse do body, mas aceitar requisições vazias
+      const text = await req.text()
+      if (text && text.trim()) {
+        body = JSON.parse(text)
+      }
     } catch (parseError: any) {
-      console.error('[RESEND_OTP] Erro ao fazer parse do body:', parseError)
-      return NextResponse.json(
-        { status: 'error', message: 'Erro ao processar requisição.' },
-        { status: 400 }
-      )
+      // Se não conseguir fazer parse, usar body vazio (usuário reenviando para si mesmo)
+      console.log('[RESEND_OTP] Body vazio ou inválido, usando padrão:', parseError.message)
+      body = {}
     }
 
-    const { userId: targetUserId } = body
+    const { userId: targetUserId } = body || {}
 
     // Se userId foi fornecido, é admin reenviando para outro usuário
     let userId: string
