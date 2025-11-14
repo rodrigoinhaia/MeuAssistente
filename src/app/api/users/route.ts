@@ -81,8 +81,10 @@ export async function GET(request: NextRequest) {
           email: true,
           role: true,
           isActive: true,
+          isVerified: true,
+          phone: true,
           createdAt: true,
-        },
+        } as any,
         orderBy: {
           name: 'asc',
         },
@@ -113,9 +115,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Serializar datas para JSON
-    const serializedUsers = users.map((user) => ({
+    const serializedUsers = users.map((user: any) => ({
       ...user,
-      createdAt: user.createdAt.toISOString(),
+      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
     }));
 
     return NextResponse.json({ status: 'ok', users: serializedUsers });
@@ -355,21 +357,24 @@ export async function POST(request: NextRequest) {
         cpf: body.cpf || `00000000000`, // CPF temporário - pode ser atualizado depois
         phone: body.phone || `00000000000`, // Telefone temporário - pode ser atualizado depois
       } as any, // Type assertion temporária até o Prisma Client ser totalmente atualizado
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+          isVerified: true,
+          phone: true,
+          createdAt: true,
+        } as any,
     });
 
     // Enviar código OTP via WhatsApp se tiver telefone válido
     const userPhone = body.phone || ''
     if (userPhone && userPhone !== '00000000000') {
       try {
-        await createAndSendOTP(newUser.id, userPhone)
+        const userId = typeof (newUser as any).id === 'string' ? (newUser as any).id : String((newUser as any).id)
+        await createAndSendOTP(userId, userPhone)
       } catch (otpError) {
         console.error('[USERS_POST] Erro ao enviar OTP:', otpError)
         // Continua mesmo se falhar - usuário pode solicitar reenvio depois
@@ -382,7 +387,7 @@ export async function POST(request: NextRequest) {
       requiresVerification: true,
       user: {
         ...newUser,
-        createdAt: newUser.createdAt.toISOString(),
+        createdAt: (newUser.createdAt instanceof Date) ? newUser.createdAt.toISOString() : newUser.createdAt,
       }
     });
   } catch (error: any) {

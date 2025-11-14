@@ -21,6 +21,7 @@ import {
 } from 'react-icons/ri'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import OTPVerificationModal from '@/app/components/OTPVerificationModal'
 
 interface User {
   id: string
@@ -28,6 +29,8 @@ interface User {
   email: string
   role: 'OWNER' | 'SUPER_ADMIN' | 'USER'
   isActive: boolean
+  isVerified?: boolean
+  phone?: string
   createdAt: string
 }
 
@@ -41,6 +44,7 @@ export default function UsersPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [passwordModal, setPasswordModal] = useState<{ userId: string; userName: string } | null>(null)
+  const [otpModal, setOtpModal] = useState<{ userId: string; userName: string; phone?: string } | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [changingPassword, setChangingPassword] = useState(false)
@@ -533,13 +537,24 @@ export default function UsersPage() {
                     </div>
                   )}
                   {canEditStatus && (
-                    <button
-                      onClick={() => setPasswordModal({ userId: user.id, userName: user.name })}
-                      className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
-                      title="Alterar senha"
-                    >
-                      <RiLockPasswordLine className="w-4 h-4" />
-                    </button>
+                    <>
+                      {!user.isVerified && (
+                        <button
+                          onClick={() => setOtpModal({ userId: user.id, userName: user.name, phone: user.phone })}
+                          className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                          title="Verificar WhatsApp"
+                        >
+                          <RiShieldStarLine className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setPasswordModal({ userId: user.id, userName: user.name })}
+                        className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+                        title="Alterar senha"
+                      >
+                        <RiLockPasswordLine className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -773,6 +788,22 @@ export default function UsersPage() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* Modal de Verificação OTP */}
+      {otpModal && (
+        <OTPVerificationModal
+          isOpen={!!otpModal}
+          onClose={() => setOtpModal(null)}
+          onSuccess={() => {
+            setSuccess('WhatsApp verificado com sucesso!')
+            setOtpModal(null)
+            fetchUsers() // Recarregar lista de usuários
+          }}
+          userId={otpModal.userId}
+          phoneNumber={otpModal.phone}
+          isAdminVerifying={true}
+        />
       )}
     </div>
   )

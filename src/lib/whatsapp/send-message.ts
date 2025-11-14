@@ -16,32 +16,7 @@ export async function sendWhatsAppMessage(options: SendMessageOptions): Promise<
   const { phoneNumber, message, familyId } = options
 
   try {
-    // Opção 1: Usar N8N webhook (se configurado)
-    const n8nWebhookUrl = process.env.N8N_WHATSAPP_WEBHOOK_URL
-    if (n8nWebhookUrl) {
-      try {
-        const response = await fetch(n8nWebhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            phoneNumber,
-            message,
-            familyId,
-          }),
-        })
-
-        if (response.ok) {
-          console.log('[SEND_WHATSAPP] Mensagem enviada via N8N:', phoneNumber)
-          return true
-        }
-      } catch (error) {
-        console.error('[SEND_WHATSAPP] Erro ao enviar via N8N:', error)
-      }
-    }
-
-    // Opção 2: Usar Evolution API diretamente (se configurado)
+    // Usar Evolution API diretamente (configurado via variáveis de ambiente)
     const evolutionApiUrl = process.env.EVOLUTION_API_URL
     const evolutionApiKey = process.env.EVOLUTION_API_KEY
     const evolutionInstance = process.env.EVOLUTION_INSTANCE_NAME

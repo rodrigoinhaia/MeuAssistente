@@ -5,6 +5,8 @@ import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { RiLockPasswordLine } from 'react-icons/ri'
 import { HiOutlineMail } from 'react-icons/hi'
+import OTPVerificationModal from '@/app/components/OTPVerificationModal'
+import apiClient from '@/lib/axios-config'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -12,6 +14,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showOTPModal, setShowOTPModal] = useState(false)
+  const [userPhone, setUserPhone] = useState<string | undefined>()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,12 +33,10 @@ export default function LoginPage() {
       if (res?.error) {
         console.error('Auth Error:', res.error)
         
-        // Se o erro for sobre verificação, redirecionar para página de verificação
+        // Se o erro for sobre verificação, abrir modal de verificação
         if (res.error.includes('verificado') || res.error.includes('verificação')) {
-          setError('Você precisa verificar seu WhatsApp antes de acessar o sistema.')
-          setTimeout(() => {
-            router.push('/verify')
-          }, 2000)
+          setShowOTPModal(true)
+          setError('')
         } else {
           setError(res.error)
         }
@@ -46,7 +48,7 @@ export default function LoginPage() {
         const isVerified = (session?.user as any)?.isVerified !== false
         
         if (!isVerified) {
-          router.push('/verify')
+          setShowOTPModal(true)
         } else {
           router.push('/dashboard')
         }
@@ -154,6 +156,23 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+
+      <OTPVerificationModal
+        isOpen={showOTPModal}
+        onClose={() => setShowOTPModal(false)}
+        onSuccess={async () => {
+          // Após verificação bem-sucedida, fazer login novamente
+          const res = await signIn('credentials', {
+            email,
+            password,
+            redirect: false,
+          })
+          if (!res?.error) {
+            router.push('/dashboard')
+          }
+        }}
+        phoneNumber={userPhone}
+      />
     </div>
   )
 } 
