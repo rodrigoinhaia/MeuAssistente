@@ -79,7 +79,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Conta da família está desativada')
         }
 
-        const userPassword = userWithfamily.password as string | null | undefined
+        const userPassword = (userWithfamily.password as unknown) as string | null | undefined
         
         console.log('Senha fornecida:', credentials.password)
         console.log('Hash armazenado:', userPassword)
@@ -99,8 +99,8 @@ export const authOptions: NextAuthOptions = {
           console.error('Senha inválida - Detalhes:', {
             email: credentials.email,
             passwordLength: credentials.password?.length,
-            hashLength: userWithfamily.password?.length,
-            hashPrefix: userWithfamily.password?.substring(0, 10),
+            hashLength: userPassword?.length,
+            hashPrefix: userPassword?.substring(0, 10),
           })
           throw new Error('Senha inválida')
         }
