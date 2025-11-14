@@ -63,27 +63,58 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!user.phone) {
+    if (!user.phone || user.phone === '00000000000') {
       return NextResponse.json(
         { status: 'error', message: 'Telefone não cadastrado.' },
         { status: 400 }
       )
     }
 
+    // Validar formato do telefone
+    const phoneDigits = user.phone.replace(/\D/g, '')
+    if (phoneDigits.length < 10) {
+      console.error('[RESEND_OTP] Telefone inválido:', user.phone)
+      return NextResponse.json(
+        { status: 'error', message: 'Telefone inválido. Entre em contato com o administrador.' },
+        { status: 400 }
+      )
+    }
+
+    console.log('[RESEND_OTP] Enviando código para:', {
+      userId,
+      phone: user.phone,
+      phoneDigits: phoneDigits.length,
+    })
+
     // Gerar e enviar novo código
     try {
       await createAndSendOTP(userId, user.phone)
       
+      console.log('[RESEND_OTP] ✅ Código enviado com sucesso')
       return NextResponse.json({
         status: 'ok',
         message: 'Novo código enviado para seu WhatsApp!',
       })
     } catch (otpError: any) {
-      console.error('[RESEND_OTP] Erro ao criar/enviar OTP:', otpError)
+      console.error('[RESEND_OTP] ❌ Erro ao criar/enviar OTP:', {
+        message: otpError.message,
+        stack: otpError.stack,
+        userId,
+        phone: user.phone,
+        phoneDigits: phoneDigits.length,
+      })
+      
+      // Verificar se é erro de configuração do WhatsApp
+      const isConfigError = otpError.message?.includes('configurado') || 
+                           otpError.message?.includes('EVOLUTION') ||
+                           otpError.message?.includes('Nenhum método')
+      
       return NextResponse.json(
         { 
           status: 'error', 
-          message: 'Erro ao enviar código. Verifique se o WhatsApp está configurado corretamente.',
+          message: isConfigError 
+            ? 'WhatsApp não está configurado. Entre em contato com o administrador.'
+            : 'Erro ao enviar código. Verifique se o WhatsApp está configurado corretamente.',
           details: process.env.NODE_ENV === 'development' ? otpError.message : undefined
         },
         { status: 500 }

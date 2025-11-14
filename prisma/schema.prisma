@@ -77,7 +77,7 @@ model User {
 // Modelo para Verificação OTP via WhatsApp
 model OTPVerification {
   id        String   @id @default(uuid())
-  userId    String
+  userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   code      String
   phone     String

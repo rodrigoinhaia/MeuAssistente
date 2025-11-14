@@ -80,11 +80,39 @@ export async function sendWhatsAppMessage(options: SendMessageOptions): Promise<
                 // Se não conseguir fazer parse do JSON, tentar texto
                 return response.text().catch(() => ({}))
               })
+              
+              // Verificar se a mensagem foi realmente enviada
+              const status = (responseData as any)?.status
+              const messageId = (responseData as any)?.key?.id
+              
               console.log('[SEND_WHATSAPP] ✅ Mensagem enviada via Evolution API:', {
                 phoneUsed: phoneToTry,
                 phoneOriginal: phoneNumber,
+                status: status || 'N/A',
+                messageId: messageId || 'N/A',
                 response: responseData,
               })
+              
+              // Status pode ser: PENDING, SENT, DELIVERED, READ, FAILED
+              if (status === 'FAILED') {
+                console.error('[SEND_WHATSAPP] ⚠️ Mensagem falhou:', responseData)
+                // Continuar tentando próximo formato se disponível
+                if (phoneToTry !== phoneVariants[phoneVariants.length - 1]) {
+                  console.log(`[SEND_WHATSAPP] Tentando próximo formato devido a status FAILED...`)
+                  continue
+                }
+                throw new Error(`Mensagem falhou ao ser enviada. Status: ${status}`)
+              }
+              
+              // Avisar se status é PENDING (mensagem aceita mas pode não ter sido entregue)
+              if (status === 'PENDING') {
+                console.warn('[SEND_WHATSAPP] ⚠️ Status PENDING - Mensagem aceita mas pode não ter sido entregue ainda')
+                console.warn('[SEND_WHATSAPP] Verifique se:')
+                console.warn('   - O número está na lista de contatos da instância')
+                console.warn('   - A instância está totalmente conectada')
+                console.warn('   - O WhatsApp está sincronizado')
+              }
+              
               return true
             } else {
               // Tentar ler o corpo da resposta como JSON primeiro
