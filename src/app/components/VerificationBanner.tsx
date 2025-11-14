@@ -10,12 +10,23 @@ export default function VerificationBanner() {
   const [showModal, setShowModal] = useState(false)
   const [dismissed, setDismissed] = useState(false)
 
-  const isVerified = (session?.user as any)?.isVerified !== false
+  // Verificar se o usuário está realmente verificado
+  // isVerified deve ser explicitamente true, não apenas "não false"
+  const isVerified = (session?.user as any)?.isVerified === true
 
   // Se estiver verificado ou já foi dispensado, não mostrar
   if (isVerified || dismissed) {
     return null
   }
+  
+  // Log para debug
+  console.log('[VerificationBanner] Status:', {
+    isVerified: (session?.user as any)?.isVerified,
+    isVerifiedStrict: isVerified,
+    dismissed,
+    email: (session?.user as any)?.email,
+    phone: (session?.user as any)?.phone,
+  })
 
   return (
     <>

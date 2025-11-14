@@ -133,7 +133,7 @@ export const authOptions: NextAuthOptions = {
           id: token.id as string,
           familyId: token.familyId as string,
           role: token.role as string,
-          isVerified: token.isVerified as boolean ?? true, // Default true para compatibilidade
+            isVerified: token.isVerified as boolean ?? false, // Default false - usuário precisa verificar via OTP
           phone: (token as any).phone as string | undefined,
         }
       }
