@@ -29,14 +29,8 @@ export default function LoginPage() {
       if (res?.error) {
         console.error('Auth Error:', res.error)
         
-        // Se o erro for sobre verificação, abrir modal de verificação
-        if (res.error.includes('verificado') || res.error.includes('verificação')) {
-          setLoginCredentials({ email, password })
-          setShowOTPModal(true)
-          setError('')
-        } else {
-          setError(res.error)
-        }
+        // Mostrar erro normalmente (não bloqueia mais o login por verificação)
+        setError(res.error)
       } else {
         // Login bem-sucedido - redirecionar para dashboard
         // Se não estiver verificado, o dashboard mostrará um aviso
