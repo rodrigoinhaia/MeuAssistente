@@ -73,7 +73,8 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Verifica se o family está ativo
-        if (!userWithfamily.family?.isActive) {
+        const familyIsActive = (userWithfamily.family as any)?.isActive
+        if (familyIsActive === false) {
           console.error('Família inativa')
           throw new Error('Conta da família está desativada')
         }
