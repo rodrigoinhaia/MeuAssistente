@@ -38,14 +38,25 @@ model Family {
   @@map("families")
 }
 
+// Enum para classificação familiar
+enum FamilyRole {
+  PAI
+  MAE
+  FILHO
+  FILHA
+  OUTROS
+}
+
 // Modelo para Usuários
 model User {
-  id           String   @id @default(uuid())
+  id           String      @id @default(uuid())
   name         String
   email        String
   password     String
   cpf          String
   phone        String
+  avatar       String? // URL da foto de perfil
+  familyRole   FamilyRole? @map("family_role") // Classificação na família
   cep          String?
   street       String?
   number       String?
@@ -53,21 +64,21 @@ model User {
   neighborhood String?
   city         String?
   state        String?
-  role         UserRole @default(OWNER)
-  isActive     Boolean  @default(true) @map("is_active")
-  isVerified   Boolean  @default(false) @map("is_verified")
+  role         UserRole    @default(OWNER)
+  isActive     Boolean     @default(true) @map("is_active")
+  isVerified   Boolean     @default(false) @map("is_verified")
   familyId     String
-  family       Family   @relation(fields: [familyId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  family       Family      @relation(fields: [familyId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   // Relacionamentos
-  transactions    Transaction[]
-  commitments     Commitment[]
-  tasks           Task[]
-  integrations    Integration[]
-  syncLogs        SyncLog[]
-  bankConnections BankConnection[]
+  transactions     Transaction[]
+  commitments      Commitment[]
+  tasks            Task[]
+  integrations     Integration[]
+  syncLogs         SyncLog[]
+  bankConnections  BankConnection[]
   otpVerifications OTPVerification[]
 
   @@unique([email, familyId])
@@ -76,14 +87,14 @@ model User {
 
 // Modelo para Verificação OTP via WhatsApp
 model OTPVerification {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  code      String
-  phone     String
-  expiresAt DateTime @map("expires_at")
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code       String
+  phone      String
+  expiresAt  DateTime  @map("expires_at")
+  verified   Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @map("created_at")
   verifiedAt DateTime? @map("verified_at")
 
   @@index([userId])

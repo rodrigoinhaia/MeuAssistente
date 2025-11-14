@@ -26,10 +26,12 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         email: true,
+        phone: true,
+        avatar: true,
+        familyRole: true,
         role: true,
         isActive: true,
         isVerified: true,
-        phone: true,
         createdAt: true,
       } as any,
     })
@@ -61,7 +63,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, password, currentPassword } = body
+    const { name, email, phone, avatar, familyRole, password, currentPassword } = body
 
     // Buscar usuário atual
     const currentUser = await prisma.user.findUnique({
@@ -103,10 +105,26 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // Validar telefone se fornecido
+    if (phone) {
+      const phoneDigits = phone.replace(/\D/g, '')
+      if (phoneDigits.length < 10) {
+        return NextResponse.json({ error: 'Telefone inválido.' }, { status: 400 })
+      }
+    }
+
+    // Validar familyRole se fornecido
+    if (familyRole && !['PAI', 'MAE', 'FILHO', 'FILHA', 'OUTROS'].includes(familyRole)) {
+      return NextResponse.json({ error: 'Classificação familiar inválida.' }, { status: 400 })
+    }
+
     // Atualizar usuário
     const updateData: any = {}
     if (name) updateData.name = name
     if (email) updateData.email = email
+    if (phone) updateData.phone = phone
+    if (avatar !== undefined) updateData.avatar = avatar || null
+    if (familyRole !== undefined) updateData.familyRole = familyRole || null
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10)
       updateData.password = hashedPassword
@@ -119,9 +137,14 @@ export async function PATCH(request: NextRequest) {
         id: true,
         name: true,
         email: true,
+        phone: true,
+        avatar: true,
+        familyRole: true,
         role: true,
         isActive: true,
-      },
+        isVerified: true,
+        createdAt: true,
+      } as any,
     })
 
     return NextResponse.json({ 

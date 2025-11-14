@@ -44,7 +44,7 @@ export default function Header() {
                 </button>
                 <div className="border-t border-slate-200 my-1" />
                 <button
-                  onClick={() => signOut()}
+                  onClick={() => signOut({ callbackUrl: '/login' })}
                   className="w-full px-4 py-2 text-sm text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 text-left rounded-lg transition-colors"
                 >
                   Sair
