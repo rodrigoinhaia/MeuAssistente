@@ -30,41 +30,68 @@ export default function OTPVerificationModal({
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
+  const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
 
-  // Quando o modal abrir e for público, tentar enviar código automaticamente
-  useEffect(() => {
-    if (isOpen && isPublic && userEmail && !code) {
-      // Enviar código automaticamente quando modal abrir
-      const sendInitialCode = async () => {
-        setResending(true)
-        setError('')
-        setSuccess('')
-        try {
-          console.log('[OTP_MODAL] Enviando código inicial para:', userEmail)
-          const res = await apiClient.post('/auth/resend-otp-public', { email: userEmail })
-          if (res.data.status === 'ok') {
-            setSuccess('Código enviado para seu WhatsApp!')
-            console.log('[OTP_MODAL] ✅ Código enviado com sucesso')
-          } else {
-            setError(res.data.message || 'Erro ao enviar código')
-            console.error('[OTP_MODAL] ❌ Erro na resposta:', res.data)
-          }
-        } catch (err: any) {
-          const errorMsg = err.response?.data?.message || err.message || 'Erro ao enviar código'
-          setError(errorMsg)
-          console.error('[OTP_MODAL] ❌ Erro ao enviar código inicial:', {
-            message: err.message,
-            response: err.response?.data,
-            status: err.response?.status,
-          })
-        }
-        setResending(false)
+  // Função para enviar código (reutilizável)
+  const sendCode = async () => {
+    setError('')
+    setSuccess('')
+    setSending(true)
+
+    try {
+      let res
+      
+      // Se for público (não autenticado), usar rota pública com email
+      if (isPublic && userEmail) {
+        console.log('[OTP_MODAL] Enviando código para usuário público:', userEmail)
+        res = await apiClient.post('/auth/resend-otp-public', { email: userEmail })
+      } else if (isAdminVerifying && userId) {
+        // Admin enviando para outro usuário
+        console.log('[OTP_MODAL] Admin enviando código para usuário:', userId)
+        res = await apiClient.post('/auth/resend-otp', { userId })
+      } else {
+        // Usuário autenticado enviando para si mesmo
+        console.log('[OTP_MODAL] Usuário autenticado solicitando código')
+        res = await apiClient.post('/auth/resend-otp', {})
       }
-      sendInitialCode()
+      
+      if (res.data.status === 'ok') {
+        setSuccess('✅ Código enviado para seu WhatsApp!')
+        setCodeSent(true)
+        console.log('[OTP_MODAL] ✅ Código enviado com sucesso')
+      } else {
+        const errorMsg = res.data.message || 'Erro ao enviar código'
+        setError(errorMsg)
+        console.error('[OTP_MODAL] ❌ Erro na resposta:', res.data)
+      }
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Erro ao enviar código'
+      setError(errorMsg)
+      console.error('[OTP_MODAL] ❌ Erro ao enviar código:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      })
     }
-  }, [isOpen, isPublic, userEmail])
+    setSending(false)
+  }
+
+  // Quando o modal abrir, enviar código automaticamente
+  useEffect(() => {
+    if (isOpen && !codeSent && !sending) {
+      // Pequeno delay para garantir que o modal está totalmente renderizado
+      const timer = setTimeout(() => {
+        console.log('[OTP_MODAL] Modal aberto, enviando código automaticamente...')
+        sendCode()
+      }, 500)
+      
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -115,51 +142,11 @@ export default function OTPVerificationModal({
   }
 
   async function handleResend() {
-    setError('')
-    setSuccess('')
-    setResending(true)
+    await sendCode()
+  }
 
-    try {
-      // Se for público (não autenticado), usar rota pública com email
-      if (isPublic && userEmail) {
-        const res = await apiClient.post('/auth/resend-otp-public', { email: userEmail })
-        if (res.data.status === 'ok') {
-          setSuccess('Novo código enviado para o WhatsApp!')
-        } else {
-          const errorMsg = res.data.message || 'Erro ao reenviar código'
-          const details = res.data.details ? `\n\nDetalhes: ${res.data.details}` : ''
-          setError(errorMsg + details)
-        }
-      } else if (isAdminVerifying && userId) {
-        // Admin reenviando para outro usuário
-        const res = await apiClient.post('/auth/resend-otp', { userId })
-        if (res.data.status === 'ok') {
-          setSuccess('Novo código enviado para o WhatsApp!')
-        } else {
-          setError(res.data.message || 'Erro ao reenviar código')
-        }
-      } else {
-        // Usuário autenticado reenviando para si mesmo
-        const res = await apiClient.post('/auth/resend-otp', {})
-        if (res.data.status === 'ok') {
-          setSuccess('Novo código enviado para o WhatsApp!')
-        } else {
-          const errorMsg = res.data.message || 'Erro ao reenviar código'
-          const details = res.data.details ? `\n\nDetalhes: ${res.data.details}` : ''
-          setError(errorMsg + details)
-        }
-      }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Erro ao reenviar código'
-      const details = err.response?.data?.details ? `\n\nDetalhes: ${err.response.data.details}` : ''
-      setError(errorMsg + details)
-      console.error('[OTP_MODAL] Erro ao reenviar:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-      })
-    }
-    setResending(false)
+  async function handleSendNow() {
+    await sendCode()
   }
 
   return (
@@ -180,9 +167,11 @@ export default function OTPVerificationModal({
             Verificação de WhatsApp
           </h2>
           <p className="text-slate-600 text-sm">
-            {isAdminVerifying
+            {codeSent
+              ? `Código enviado! Verifique seu WhatsApp e digite o código de 6 dígitos recebido.`
+              : isAdminVerifying
               ? `Enviando código de verificação para o WhatsApp cadastrado.`
-              : `Enviamos um código de verificação de 6 dígitos para seu WhatsApp cadastrado.`}
+              : `Pegue seu celular e clique em "Enviar Código" para receber o código de verificação de 6 dígitos no WhatsApp.`}
             {phoneNumber && (
               <span className="block mt-1 font-medium text-slate-800">{phoneNumber}</span>
             )}
@@ -197,6 +186,32 @@ export default function OTPVerificationModal({
         {success && (
           <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm">
             {success}
+          </div>
+        )}
+
+        {/* Botão para enviar código se ainda não foi enviado */}
+        {!codeSent && (
+          <div className="mb-6">
+            <button
+              onClick={handleSendNow}
+              disabled={sending}
+              className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-xl shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {sending ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <RiShieldCheckLine className="w-5 h-5" />
+                  📱 Pegue seu celular e clique aqui para enviar o código
+                </>
+              )}
+            </button>
+            <p className="text-xs text-slate-500 mt-2 text-center">
+              O código será enviado para seu WhatsApp cadastrado
+            </p>
           </div>
         )}
 
@@ -218,15 +233,18 @@ export default function OTPVerificationModal({
               maxLength={6}
               required
               autoFocus
+              disabled={!codeSent}
             />
             <p className="text-xs text-slate-500 mt-2 text-center">
-              Digite o código de 6 dígitos recebido no WhatsApp
+              {codeSent 
+                ? 'Digite o código de 6 dígitos recebido no WhatsApp'
+                : 'Primeiro, envie o código usando o botão acima'}
             </p>
           </div>
 
           <button
             type="submit"
-            disabled={loading || code.length !== 6}
+            disabled={loading || code.length !== 6 || !codeSent}
             className="w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-semibold rounded-xl shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
@@ -243,25 +261,27 @@ export default function OTPVerificationModal({
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-slate-200">
-          <button
-            onClick={handleResend}
-            disabled={resending}
-            className="w-full px-4 py-2.5 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {resending ? (
-              <>
-                <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                Reenviando...
-              </>
-            ) : (
-              <>
-                <RiRefreshLine className="w-4 h-4" />
-                Não recebeu o código? Reenviar
-              </>
-            )}
-          </button>
-        </div>
+        {codeSent && (
+          <div className="mt-6 pt-6 border-t border-slate-200">
+            <button
+              onClick={handleResend}
+              disabled={sending || resending}
+              className="w-full px-4 py-2.5 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sending || resending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                  Reenviando...
+                </>
+              ) : (
+                <>
+                  <RiRefreshLine className="w-4 h-4" />
+                  Não recebeu o código? Reenviar
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         <div className="mt-4 text-center">
           <p className="text-xs text-slate-500">

@@ -1,14 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import OTPVerificationModal from './OTPVerificationModal'
 import { RiShieldCheckLine, RiCloseLine, RiAlertLine } from 'react-icons/ri'
 
 export default function VerificationBanner() {
-  const { data: session } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const [showModal, setShowModal] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
 
   // Verificar se o usuário está realmente verificado
   // isVerified deve ser explicitamente true, não apenas "não false"
@@ -27,6 +28,27 @@ export default function VerificationBanner() {
     email: (session?.user as any)?.email,
     phone: (session?.user as any)?.phone,
   })
+
+  // Função para atualizar sessão após verificação
+  const handleVerificationSuccess = async () => {
+    setIsVerifying(true)
+    // Fechar modal e esconder banner IMEDIATAMENTE
+    setShowModal(false)
+    setDismissed(true)
+    
+    try {
+      // Atualizar sessão para refletir verificação
+      await updateSession()
+      console.log('[VerificationBanner] Sessão atualizada após verificação')
+    } catch (error) {
+      console.error('[VerificationBanner] Erro ao atualizar sessão:', error)
+    }
+    
+    // Recarregar página para garantir que tudo está sincronizado
+    setTimeout(() => {
+      window.location.reload()
+    }, 300)
+  }
 
   return (
     <>
@@ -65,12 +87,7 @@ export default function VerificationBanner() {
       <OTPVerificationModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        onSuccess={() => {
-          setShowModal(false)
-          setDismissed(true)
-          // Atualizar sessão para refletir verificação
-          window.location.reload()
-        }}
+        onSuccess={handleVerificationSuccess}
         phoneNumber={(session?.user as any)?.phone}
         userEmail={(session?.user as any)?.email}
         isPublic={false} // Usuário já está autenticado

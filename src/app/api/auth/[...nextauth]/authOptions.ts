@@ -160,17 +160,49 @@ export const authOptions: NextAuthOptions = {
         console.log('[AUTH_JWT] JWT callback - User login:', {
           userId: (user as any).id,
           role: (user as any).role,
-          familyId: (user as any).familyId
+          familyId: (user as any).familyId,
+          isVerified: (user as any).isVerified,
         })
       }
-      // Se houver uma atualização de sessão, atualize o token
-      if (trigger === 'update' && session) {
-        token = { ...token, ...session }
+      // Se houver uma atualização de sessão, buscar dados atualizados do banco
+      if (trigger === 'update') {
+        // Buscar dados atualizados do usuário do banco
+        if (token.id) {
+          try {
+            const updatedUser = await prisma.user.findUnique({
+              where: { id: token.id as string },
+              select: {
+                id: true,
+                isVerified: true,
+                phone: true,
+                role: true,
+                familyId: true,
+              },
+            })
+            
+            if (updatedUser) {
+              token.isVerified = updatedUser.isVerified
+              ;(token as any).phone = updatedUser.phone
+              console.log('[AUTH_JWT] Token atualizado do banco:', {
+                userId: updatedUser.id,
+                isVerified: updatedUser.isVerified,
+                phone: updatedUser.phone,
+              })
+            }
+          } catch (error) {
+            console.error('[AUTH_JWT] Erro ao buscar usuário atualizado:', error)
+          }
+        }
+        // Também aplicar dados da sessão se fornecidos
+        if (session) {
+          token = { ...token, ...session }
+        }
       }
       console.log('[AUTH_JWT] JWT callback - Token atual:', {
         hasId: !!token.id,
         hasRole: !!token.role,
         hasFamilyId: !!token.familyId,
+        isVerified: token.isVerified,
         role: token.role,
       })
       return token
