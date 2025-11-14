@@ -25,36 +25,80 @@ export async function sendWhatsAppMessage(options: SendMessageOptions): Promise<
       try {
         // Normalizar número (remover caracteres especiais)
         const normalizedPhone = phoneNumber.replace(/\D/g, '')
+        
+        const apiUrl = `${evolutionApiUrl}/message/sendText/${evolutionInstance}`
+        const requestBody = {
+          number: normalizedPhone,
+          text: message,
+        }
+        
+        console.log('[SEND_WHATSAPP] Enviando requisição:', {
+          url: apiUrl,
+          phone: normalizedPhone,
+          phoneOriginal: phoneNumber,
+          messageLength: message.length,
+          instance: evolutionInstance,
+        })
 
-        const response = await fetch(
-          `${evolutionApiUrl}/message/sendText/${evolutionInstance}`,
-          {
-            method: 'POST',
-            headers: {
-              'apikey': evolutionApiKey,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              number: normalizedPhone,
-              text: message,
-            }),
-          }
-        )
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'apikey': evolutionApiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        })
+        
+        console.log('[SEND_WHATSAPP] Resposta recebida:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          headers: Object.fromEntries(response.headers.entries()),
+        })
 
         if (response.ok) {
-          const responseData = await response.json().catch(() => ({}))
-          console.log('[SEND_WHATSAPP] Mensagem enviada via Evolution API:', phoneNumber, responseData)
+          const responseData = await response.json().catch(() => {
+            // Se não conseguir fazer parse do JSON, tentar texto
+            return response.text().catch(() => ({}))
+          })
+          console.log('[SEND_WHATSAPP] ✅ Mensagem enviada via Evolution API:', {
+            phone: phoneNumber,
+            normalizedPhone,
+            response: responseData,
+          })
           return true
         } else {
-          const errorData = await response.json().catch(() => ({}))
-          console.error('[SEND_WHATSAPP] Erro Evolution API:', {
+          // Tentar ler o corpo da resposta como JSON primeiro
+          let errorData: any = {}
+          const contentType = response.headers.get('content-type')
+          
+          try {
+            if (contentType?.includes('application/json')) {
+              errorData = await response.json()
+            } else {
+              const textData = await response.text()
+              errorData = { message: textData, raw: textData }
+            }
+          } catch (parseError) {
+            errorData = { 
+              message: `Erro ao ler resposta: ${parseError}`,
+              status: response.status,
+              statusText: response.statusText,
+            }
+          }
+          
+          console.error('[SEND_WHATSAPP] ❌ Erro Evolution API:', {
             status: response.status,
             statusText: response.statusText,
             error: errorData,
-            url: `${evolutionApiUrl}/message/sendText/${evolutionInstance}`,
-            phone: normalizedPhone
+            url: apiUrl,
+            phone: normalizedPhone,
+            phoneOriginal: phoneNumber,
+            requestBody,
           })
-          throw new Error(`Evolution API retornou erro: ${response.status} - ${JSON.stringify(errorData)}`)
+          
+          const errorMessage = errorData.message || errorData.error || errorData.raw || 'Erro desconhecido'
+          throw new Error(`Evolution API retornou erro ${response.status}: ${errorMessage}`)
         }
       } catch (error: any) {
         console.error('[SEND_WHATSAPP] Erro ao enviar via Evolution API:', {

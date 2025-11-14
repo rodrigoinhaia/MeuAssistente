@@ -20,6 +20,7 @@ export async function middleware(req: NextRequest) {
     '/api/webhooks/asaas', // Webhook do Asaas (não precisa autenticação)
     '/api/auth/resend-otp-public', // Rota pública para reenviar OTP
     '/api/auth/verify-otp-public', // Rota pública para verificar OTP
+    '/api/test/whatsapp', // Rota de teste para WhatsApp (apenas para debug)
     '/login',
     '/register',
     '/verify', // Página de verificação OTP

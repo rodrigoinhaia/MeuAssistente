@@ -39,14 +39,26 @@ export default function OTPVerificationModal({
       // Enviar código automaticamente quando modal abrir
       const sendInitialCode = async () => {
         setResending(true)
+        setError('')
+        setSuccess('')
         try {
+          console.log('[OTP_MODAL] Enviando código inicial para:', userEmail)
           const res = await apiClient.post('/auth/resend-otp-public', { email: userEmail })
           if (res.data.status === 'ok') {
             setSuccess('Código enviado para seu WhatsApp!')
+            console.log('[OTP_MODAL] ✅ Código enviado com sucesso')
+          } else {
+            setError(res.data.message || 'Erro ao enviar código')
+            console.error('[OTP_MODAL] ❌ Erro na resposta:', res.data)
           }
         } catch (err: any) {
-          // Não mostrar erro inicial - usuário pode clicar em reenviar depois
-          console.error('[OTP_MODAL] Erro ao enviar código inicial:', err)
+          const errorMsg = err.response?.data?.message || err.message || 'Erro ao enviar código'
+          setError(errorMsg)
+          console.error('[OTP_MODAL] ❌ Erro ao enviar código inicial:', {
+            message: err.message,
+            response: err.response?.data,
+            status: err.response?.status,
+          })
         }
         setResending(false)
       }
@@ -114,7 +126,9 @@ export default function OTPVerificationModal({
         if (res.data.status === 'ok') {
           setSuccess('Novo código enviado para o WhatsApp!')
         } else {
-          setError(res.data.message || 'Erro ao reenviar código')
+          const errorMsg = res.data.message || 'Erro ao reenviar código'
+          const details = res.data.details ? `\n\nDetalhes: ${res.data.details}` : ''
+          setError(errorMsg + details)
         }
       } else if (isAdminVerifying && userId) {
         // Admin reenviando para outro usuário
@@ -130,11 +144,20 @@ export default function OTPVerificationModal({
         if (res.data.status === 'ok') {
           setSuccess('Novo código enviado para o WhatsApp!')
         } else {
-          setError(res.data.message || 'Erro ao reenviar código')
+          const errorMsg = res.data.message || 'Erro ao reenviar código'
+          const details = res.data.details ? `\n\nDetalhes: ${res.data.details}` : ''
+          setError(errorMsg + details)
         }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao reenviar código')
+      const errorMsg = err.response?.data?.message || err.message || 'Erro ao reenviar código'
+      const details = err.response?.data?.details ? `\n\nDetalhes: ${err.response.data.details}` : ''
+      setError(errorMsg + details)
+      console.error('[OTP_MODAL] Erro ao reenviar:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      })
     }
     setResending(false)
   }

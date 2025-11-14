@@ -54,16 +54,48 @@ export async function POST(req: Request) {
     }
 
     // Gerar e enviar novo código
-    await createAndSendOTP(user.id, user.phone)
-
-    return NextResponse.json({
-      status: 'ok',
-      message: 'Novo código enviado para seu WhatsApp!',
+    console.log('[RESEND_OTP_PUBLIC] Enviando código para:', {
+      userId: user.id,
+      email: user.email,
+      phone: user.phone,
     })
-  } catch (error) {
-    console.error('[RESEND_OTP_PUBLIC]', error)
+    
+    try {
+      await createAndSendOTP(user.id, user.phone)
+      
+      console.log('[RESEND_OTP_PUBLIC] ✅ Código enviado com sucesso')
+      return NextResponse.json({
+        status: 'ok',
+        message: 'Novo código enviado para seu WhatsApp!',
+      })
+    } catch (otpError: any) {
+      console.error('[RESEND_OTP_PUBLIC] ❌ Erro ao criar/enviar OTP:', {
+        message: otpError.message,
+        stack: otpError.stack,
+        userId: user.id,
+        phone: user.phone,
+      })
+      
+      return NextResponse.json(
+        { 
+          status: 'error', 
+          message: 'Erro ao enviar código. Verifique se o WhatsApp está configurado corretamente.',
+          details: process.env.NODE_ENV === 'development' ? otpError.message : undefined
+        },
+        { status: 500 }
+      )
+    }
+  } catch (error: any) {
+    console.error('[RESEND_OTP_PUBLIC] ❌ Erro geral:', {
+      message: error.message,
+      stack: error.stack,
+    })
     return NextResponse.json(
-      { status: 'error', message: 'Erro ao reenviar código.' },
+      { 
+        status: 'error', 
+        message: 'Erro ao reenviar código.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
