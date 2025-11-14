@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
+import VerificationBanner from '../components/VerificationBanner'
 import apiClient from '@/lib/axios-config'
 
 export default function DashboardLayout({
@@ -122,6 +123,7 @@ export default function DashboardLayout({
         <Header />
         
         <main className="flex-1 p-8 overflow-auto">
+          <VerificationBanner />
           {children}
         </main>
       </div>

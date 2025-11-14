@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import apiClient from '@/lib/axios-config'
 import { RiShieldCheckLine, RiRefreshLine, RiLockPasswordLine, RiCloseLine } from 'react-icons/ri'
 
@@ -10,7 +10,10 @@ interface OTPVerificationModalProps {
   onSuccess: () => void
   phoneNumber?: string
   userId?: string
+  userEmail?: string // Email do usuário (para reenvio quando não autenticado)
+  userPassword?: string // Senha do usuário (para verificação pública)
   isAdminVerifying?: boolean // Se true, é admin verificando outro usuário
+  isPublic?: boolean // Se true, não requer autenticação (para login)
 }
 
 export default function OTPVerificationModal({
@@ -19,13 +22,37 @@ export default function OTPVerificationModal({
   onSuccess,
   phoneNumber,
   userId,
+  userEmail,
+  userPassword,
   isAdminVerifying = false,
+  isPublic = false,
 }: OTPVerificationModalProps) {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  // Quando o modal abrir e for público, tentar enviar código automaticamente
+  useEffect(() => {
+    if (isOpen && isPublic && userEmail && !code) {
+      // Enviar código automaticamente quando modal abrir
+      const sendInitialCode = async () => {
+        setResending(true)
+        try {
+          const res = await apiClient.post('/auth/resend-otp-public', { email: userEmail })
+          if (res.data.status === 'ok') {
+            setSuccess('Código enviado para seu WhatsApp!')
+          }
+        } catch (err: any) {
+          // Não mostrar erro inicial - usuário pode clicar em reenviar depois
+          console.error('[OTP_MODAL] Erro ao enviar código inicial:', err)
+        }
+        setResending(false)
+      }
+      sendInitialCode()
+    }
+  }, [isOpen, isPublic, userEmail])
 
   if (!isOpen) return null
 
@@ -42,32 +69,32 @@ export default function OTPVerificationModal({
     }
 
     try {
-      if (isAdminVerifying && userId) {
-        // Admin verificando outro usuário - usar rota específica
-        const res = await apiClient.post('/auth/verify-otp', { code, userId })
-        if (res.data.status === 'ok') {
-          setSuccess('WhatsApp verificado com sucesso!')
-          setTimeout(() => {
-            onSuccess()
-            onClose()
-            setCode('')
-          }, 1500)
-        } else {
-          setError(res.data.message || 'Código inválido')
-        }
+      let res
+      
+      // Se for público (não autenticado), usar rota pública com email e senha
+      if (isPublic && userEmail && userPassword) {
+        res = await apiClient.post('/auth/verify-otp-public', { 
+          code, 
+          email: userEmail, 
+          password: userPassword 
+        })
+      } else if (isAdminVerifying && userId) {
+        // Admin verificando outro usuário
+        res = await apiClient.post('/auth/verify-otp', { code, userId })
       } else {
-        // Usuário verificando a si mesmo
-        const res = await apiClient.post('/auth/verify-otp', { code })
-        if (res.data.status === 'ok') {
-          setSuccess('WhatsApp verificado com sucesso!')
-          setTimeout(() => {
-            onSuccess()
-            onClose()
-            setCode('')
-          }, 1500)
-        } else {
-          setError(res.data.message || 'Código inválido')
-        }
+        // Usuário autenticado verificando a si mesmo
+        res = await apiClient.post('/auth/verify-otp', { code })
+      }
+      
+      if (res.data.status === 'ok') {
+        setSuccess('WhatsApp verificado com sucesso!')
+        setTimeout(() => {
+          onSuccess()
+          onClose()
+          setCode('')
+        }, 1500)
+      } else {
+        setError(res.data.message || 'Código inválido')
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao verificar código')
@@ -81,14 +108,30 @@ export default function OTPVerificationModal({
     setResending(true)
 
     try {
-      const res = await apiClient.post('/auth/resend-otp', {
-        ...(isAdminVerifying && userId ? { userId } : {}),
-      })
-      
-      if (res.data.status === 'ok') {
-        setSuccess('Novo código enviado para o WhatsApp!')
+      // Se for público (não autenticado), usar rota pública com email
+      if (isPublic && userEmail) {
+        const res = await apiClient.post('/auth/resend-otp-public', { email: userEmail })
+        if (res.data.status === 'ok') {
+          setSuccess('Novo código enviado para o WhatsApp!')
+        } else {
+          setError(res.data.message || 'Erro ao reenviar código')
+        }
+      } else if (isAdminVerifying && userId) {
+        // Admin reenviando para outro usuário
+        const res = await apiClient.post('/auth/resend-otp', { userId })
+        if (res.data.status === 'ok') {
+          setSuccess('Novo código enviado para o WhatsApp!')
+        } else {
+          setError(res.data.message || 'Erro ao reenviar código')
+        }
       } else {
-        setError(res.data.message || 'Erro ao reenviar código')
+        // Usuário autenticado reenviando para si mesmo
+        const res = await apiClient.post('/auth/resend-otp')
+        if (res.data.status === 'ok') {
+          setSuccess('Novo código enviado para o WhatsApp!')
+        } else {
+          setError(res.data.message || 'Erro ao reenviar código')
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao reenviar código')

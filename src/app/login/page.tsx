@@ -5,8 +5,6 @@ import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { RiLockPasswordLine } from 'react-icons/ri'
 import { HiOutlineMail } from 'react-icons/hi'
-import OTPVerificationModal from '@/app/components/OTPVerificationModal'
-import apiClient from '@/lib/axios-config'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,8 +12,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showOTPModal, setShowOTPModal] = useState(false)
-  const [userPhone, setUserPhone] = useState<string | undefined>()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,23 +31,16 @@ export default function LoginPage() {
         
         // Se o erro for sobre verificação, abrir modal de verificação
         if (res.error.includes('verificado') || res.error.includes('verificação')) {
+          setLoginCredentials({ email, password })
           setShowOTPModal(true)
           setError('')
         } else {
           setError(res.error)
         }
       } else {
-        const session = await getSession()
-        console.log('Session:', session)
-        
-        // Verificar se está verificado antes de redirecionar
-        const isVerified = (session?.user as any)?.isVerified !== false
-        
-        if (!isVerified) {
-          setShowOTPModal(true)
-        } else {
-          router.push('/dashboard')
-        }
+        // Login bem-sucedido - redirecionar para dashboard
+        // Se não estiver verificado, o dashboard mostrará um aviso
+        router.push('/dashboard')
       }
     } catch (error) {
       console.error('Login Error:', error)
@@ -156,23 +145,6 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
-
-      <OTPVerificationModal
-        isOpen={showOTPModal}
-        onClose={() => setShowOTPModal(false)}
-        onSuccess={async () => {
-          // Após verificação bem-sucedida, fazer login novamente
-          const res = await signIn('credentials', {
-            email,
-            password,
-            redirect: false,
-          })
-          if (!res?.error) {
-            router.push('/dashboard')
-          }
-        }}
-        phoneNumber={userPhone}
-      />
     </div>
   )
 } 

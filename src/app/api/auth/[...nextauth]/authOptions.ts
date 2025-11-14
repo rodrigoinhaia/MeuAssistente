@@ -44,12 +44,13 @@ export const authOptions: NextAuthOptions = {
             role: true,
             isActive: true,
             isVerified: true,
+            phone: true,
             family: {
               select: {
                 isActive: true,
               }
             }
-          }
+          } as any
         })
 
         // Log do resultado bruto da query
@@ -62,11 +63,8 @@ export const authOptions: NextAuthOptions = {
           throw new Error('E-mail ou senha inválidos')
         }
 
-        // Verificar se o usuário está verificado
-        if (!userWithfamily.isVerified) {
-          console.error('Usuário não verificado:', credentials.email)
-          throw new Error('Seu WhatsApp ainda não foi verificado. Verifique seu WhatsApp e insira o código de verificação.')
-        }
+        // Não bloquear login se não estiver verificado - apenas avisar depois
+        // O usuário pode acessar o painel mas verá um aviso para verificar
 
         // Verifica se o usuário está ativo (redundante, mas garante)
         if (!userWithfamily.isActive) {
@@ -112,6 +110,7 @@ export const authOptions: NextAuthOptions = {
           familyId: userWithfamily.familyId,
           role: userWithfamily.role,
           isVerified: userWithfamily.isVerified,
+          phone: (userWithfamily as any).phone || undefined,
         }
 
         console.log('Retornando dados do usuário:', userData)
@@ -132,6 +131,7 @@ export const authOptions: NextAuthOptions = {
           familyId: token.familyId as string,
           role: token.role as string,
           isVerified: token.isVerified as boolean ?? true, // Default true para compatibilidade
+          phone: (token as any).phone as string | undefined,
         }
       }
       console.log('[AUTH_SESSION] Session callback:', {
@@ -153,6 +153,7 @@ export const authOptions: NextAuthOptions = {
         token.familyId = (user as any).familyId
         token.role = (user as any).role
         token.isVerified = (user as any).isVerified
+        ;(token as any).phone = (user as any).phone
         console.log('[AUTH_JWT] JWT callback - User login:', {
           userId: (user as any).id,
           role: (user as any).role,

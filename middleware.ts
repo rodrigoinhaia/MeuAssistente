@@ -18,6 +18,8 @@ export async function middleware(req: NextRequest) {
     '/api/debug-session',
     '/api/plans/public', // Rota pública para listar planos
     '/api/webhooks/asaas', // Webhook do Asaas (não precisa autenticação)
+    '/api/auth/resend-otp-public', // Rota pública para reenviar OTP
+    '/api/auth/verify-otp-public', // Rota pública para verificar OTP
     '/login',
     '/register',
     '/verify', // Página de verificação OTP
@@ -101,12 +103,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Verificar se o usuário está verificado (exceto na página de verificação)
-  const isVerified = (token as any).isVerified !== false // Default true para compatibilidade
-  if (!isVerified && pathname !== '/verify' && !pathname.startsWith('/api/auth')) {
-    console.log('[MIDDLEWARE] Usuário não verificado, redirecionando para /verify')
-    return NextResponse.redirect(new URL('/verify', req.url))
-  }
+  // Não bloquear acesso se não estiver verificado - apenas mostrar aviso no dashboard
+  // O usuário pode acessar o painel mas verá um banner pedindo para verificar
 
   // Token válido, permite acesso
   return NextResponse.next()

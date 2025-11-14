@@ -28,8 +28,10 @@ export async function GET(request: NextRequest) {
         email: true,
         role: true,
         isActive: true,
+        isVerified: true,
+        phone: true,
         createdAt: true,
-      },
+      } as any,
     })
 
     if (!user) {
