@@ -37,12 +37,21 @@ export async function createAndSendOTP(userId: string, phone: string): Promise<s
   // Enviar via WhatsApp
   const message = `🔐 *Código de Verificação MeuAssistente*\n\nSeu código de verificação é: *${code}*\n\nEste código expira em 10 minutos.\n\nSe você não solicitou este código, ignore esta mensagem.`
   
-  await sendWhatsAppMessage({
-    phoneNumber: phone,
-    message,
-  })
-
-  console.log(`[OTP] Código gerado para ${phone}: ${code}`)
+  try {
+    const sent = await sendWhatsAppMessage({
+      phoneNumber: phone,
+      message,
+    })
+    
+    if (!sent) {
+      throw new Error('Falha ao enviar mensagem via WhatsApp')
+    }
+    
+    console.log(`[OTP] Código gerado e enviado para ${phone}: ${code}`)
+  } catch (error: any) {
+    console.error(`[OTP] Erro ao enviar código para ${phone}:`, error.message)
+    throw new Error(`Não foi possível enviar o código OTP: ${error.message}`)
+  }
 
   return code
 }

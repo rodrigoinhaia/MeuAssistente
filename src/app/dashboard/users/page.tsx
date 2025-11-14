@@ -17,7 +17,8 @@ import {
   RiCalendarLine,
   RiShieldStarLine,
   RiShieldCheckLine,
-  RiLockPasswordLine
+  RiLockPasswordLine,
+  RiWhatsappLine
 } from 'react-icons/ri'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -44,7 +45,10 @@ export default function UsersPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [passwordModal, setPasswordModal] = useState<{ userId: string; userName: string } | null>(null)
+  const [editModal, setEditModal] = useState<{ userId: string; userName: string; userEmail: string; userPhone?: string } | null>(null)
   const [otpModal, setOtpModal] = useState<{ userId: string; userName: string; phone?: string } | null>(null)
+  const [editUser, setEditUser] = useState({ name: '', email: '', phone: '' })
+  const [editing, setEditing] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [changingPassword, setChangingPassword] = useState(false)
@@ -113,6 +117,84 @@ export default function UsersPage() {
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao atualizar status do usuário')
     }
+  }
+
+  function normalizePhoneNumber(phone: string): string {
+    // Remove todos os caracteres não numéricos
+    const digits = phone.replace(/\D/g, '')
+    
+    // Se já começa com 55, retorna como está
+    if (digits.startsWith('55') && digits.length >= 12) {
+      return digits
+    }
+    
+    // Se começa com 0, remove o 0
+    const withoutLeadingZero = digits.startsWith('0') ? digits.substring(1) : digits
+    
+    // Se tem 10 ou 11 dígitos (DDD + número), adiciona 55
+    if (withoutLeadingZero.length >= 10 && withoutLeadingZero.length <= 11) {
+      return `55${withoutLeadingZero}`
+    }
+    
+    // Se já tem 12+ dígitos sem 55, assume que está completo
+    if (withoutLeadingZero.length >= 12) {
+      return withoutLeadingZero
+    }
+    
+    // Retorna o número normalizado
+    return withoutLeadingZero
+  }
+
+  async function handleEditUser() {
+    if (!editModal) return
+
+    setError('')
+    setSuccess('')
+    
+    if (!editUser.name.trim()) {
+      setError('Nome é obrigatório')
+      return
+    }
+
+    if (!editUser.email.trim()) {
+      setError('E-mail é obrigatório')
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(editUser.email)) {
+      setError('E-mail inválido')
+      return
+    }
+
+    // Normalizar telefone se fornecido
+    let normalizedPhone = editUser.phone.trim()
+    if (normalizedPhone) {
+      normalizedPhone = normalizePhoneNumber(normalizedPhone)
+      
+      // Validar formato final (deve ter pelo menos 12 dígitos com código do país)
+      if (normalizedPhone.length < 12) {
+        setError('Número de WhatsApp inválido. Deve incluir DDD e número.')
+        return
+      }
+    }
+
+    setEditing(true)
+    try {
+      await apiClient.patch('/users', { 
+        userId: editModal.userId, 
+        name: editUser.name.trim(),
+        email: editUser.email.trim().toLowerCase(),
+        phone: normalizedPhone || undefined
+      })
+      setSuccess('Usuário atualizado com sucesso!')
+      setEditModal(null)
+      setEditUser({ name: '', email: '', phone: '' })
+      fetchUsers()
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao atualizar usuário')
+    }
+    setEditing(false)
   }
 
   async function handlePasswordChange() {
@@ -538,6 +620,25 @@ export default function UsersPage() {
                   )}
                   {canEditStatus && (
                     <>
+                      <button
+                        onClick={() => {
+                          setEditModal({ 
+                            userId: user.id, 
+                            userName: user.name, 
+                            userEmail: user.email,
+                            userPhone: user.phone 
+                          })
+                          setEditUser({ 
+                            name: user.name, 
+                            email: user.email,
+                            phone: user.phone || ''
+                          })
+                        }}
+                        className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors"
+                        title="Editar usuário"
+                      >
+                        <RiEditLine className="w-4 h-4" />
+                      </button>
                       {!user.isVerified && (
                         <button
                           onClick={() => setOtpModal({ userId: user.id, userName: user.name, phone: user.phone })}
@@ -560,6 +661,110 @@ export default function UsersPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Modal de Edição de Usuário */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-200/60">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent mb-2">
+              Editar Usuário
+            </h2>
+            <p className="text-slate-600 mb-6">
+              Editando informações de <strong>{editModal.userName}</strong>
+            </p>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm">
+                {success}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  value={editUser.name}
+                  onChange={(e) => setEditUser({ ...editUser, name: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="Nome do usuário"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={editUser.email}
+                  onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="usuario@email.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <RiWhatsappLine className="w-4 h-4 text-emerald-600" />
+                  WhatsApp
+                </label>
+                <input
+                  type="tel"
+                  value={editUser.phone}
+                  onChange={(e) => setEditUser({ ...editUser, phone: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                  placeholder="(11) 99999-9999 ou 11999999999"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  O código do país (55) será adicionado automaticamente se necessário
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditModal(null)
+                  setEditUser({ name: '', email: '', phone: '' })
+                  setError('')
+                  setSuccess('')
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleEditUser}
+                disabled={editing}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {editing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <RiEditLine className="w-4 h-4" />
+                    Salvar Alterações
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

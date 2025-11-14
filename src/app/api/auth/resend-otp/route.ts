@@ -71,16 +71,32 @@ export async function POST(req: Request) {
     }
 
     // Gerar e enviar novo código
-    await createAndSendOTP(userId, user.phone)
-
-    return NextResponse.json({
-      status: 'ok',
-      message: 'Novo código enviado para seu WhatsApp!',
-    })
-  } catch (error) {
-    console.error('[RESEND_OTP]', error)
+    try {
+      await createAndSendOTP(userId, user.phone)
+      
+      return NextResponse.json({
+        status: 'ok',
+        message: 'Novo código enviado para seu WhatsApp!',
+      })
+    } catch (otpError: any) {
+      console.error('[RESEND_OTP] Erro ao criar/enviar OTP:', otpError)
+      return NextResponse.json(
+        { 
+          status: 'error', 
+          message: 'Erro ao enviar código. Verifique se o WhatsApp está configurado corretamente.',
+          details: process.env.NODE_ENV === 'development' ? otpError.message : undefined
+        },
+        { status: 500 }
+      )
+    }
+  } catch (error: any) {
+    console.error('[RESEND_OTP] Erro geral:', error)
     return NextResponse.json(
-      { status: 'error', message: 'Erro ao reenviar código.' },
+      { 
+        status: 'error', 
+        message: 'Erro ao reenviar código.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }

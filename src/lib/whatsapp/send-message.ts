@@ -42,23 +42,42 @@ export async function sendWhatsAppMessage(options: SendMessageOptions): Promise<
         )
 
         if (response.ok) {
-          console.log('[SEND_WHATSAPP] Mensagem enviada via Evolution API:', phoneNumber)
+          const responseData = await response.json().catch(() => ({}))
+          console.log('[SEND_WHATSAPP] Mensagem enviada via Evolution API:', phoneNumber, responseData)
           return true
         } else {
           const errorData = await response.json().catch(() => ({}))
-          console.error('[SEND_WHATSAPP] Erro Evolution API:', errorData)
+          console.error('[SEND_WHATSAPP] Erro Evolution API:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+            url: `${evolutionApiUrl}/message/sendText/${evolutionInstance}`,
+            phone: normalizedPhone
+          })
+          throw new Error(`Evolution API retornou erro: ${response.status} - ${JSON.stringify(errorData)}`)
         }
-      } catch (error) {
-        console.error('[SEND_WHATSAPP] Erro ao enviar via Evolution API:', error)
+      } catch (error: any) {
+        console.error('[SEND_WHATSAPP] Erro ao enviar via Evolution API:', {
+          message: error.message,
+          stack: error.stack,
+          url: `${evolutionApiUrl}/message/sendText/${evolutionInstance}`,
+          phone: phoneNumber
+        })
+        throw error // Re-throw para que o erro seja capturado acima
       }
     }
 
     // Se nenhum método funcionou, logar para debug
-    console.warn('[SEND_WHATSAPP] Nenhum método de envio configurado. Configure N8N_WHATSAPP_WEBHOOK_URL ou Evolution API.')
-    return false
-  } catch (error) {
+    console.warn('[SEND_WHATSAPP] Nenhum método de envio configurado. Configure Evolution API.')
+    console.warn('[SEND_WHATSAPP] Variáveis necessárias:', {
+      EVOLUTION_API_URL: evolutionApiUrl ? '✅' : '❌',
+      EVOLUTION_API_KEY: evolutionApiKey ? '✅' : '❌',
+      EVOLUTION_INSTANCE_NAME: evolutionInstance ? '✅' : '❌',
+    })
+    throw new Error('Nenhum método de envio de WhatsApp configurado. Configure EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE_NAME.')
+  } catch (error: any) {
     console.error('[SEND_WHATSAPP] Erro geral ao enviar mensagem:', error)
-    return false
+    throw error // Re-throw para propagar o erro
   }
 }
 

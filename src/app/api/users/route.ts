@@ -158,7 +158,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { userId, role, isActive } = body;
+    const { userId, role, isActive, name, email, phone } = body;
 
     if (!userId) {
       return NextResponse.json({ error: 'ID do usuário é obrigatório.' }, { status: 400 });
@@ -230,9 +230,61 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'O papel de OWNER não pode ser alterado.' }, { status: 403 });
     }
     
+    // Permitir editar próprio usuário apenas para name e email (não para role/status)
     if (userToUpdate.id === session?.user?.id) {
-        console.error('[USERS_PATCH] Tentativa de editar próprio usuário bloqueada');
+      if (role !== undefined || isActive !== undefined) {
+        console.error('[USERS_PATCH] Tentativa de editar próprio papel/status bloqueada');
         return NextResponse.json({ error: 'Você não pode alterar seu próprio papel ou status.' }, { status: 403 });
+      }
+      // Permitir editar nome e email do próprio usuário
+    }
+    
+    // Validar email único se estiver sendo alterado
+    if (email && email.toLowerCase() !== userToUpdate.email.toLowerCase()) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          email: email.toLowerCase(),
+          familyId: userToUpdate.familyId,
+          NOT: { id: userId },
+        },
+      });
+      
+      if (existingUser) {
+        return NextResponse.json({ 
+          error: 'Este e-mail já está em uso por outro usuário nesta família.' 
+        }, { status: 400 });
+      }
+    }
+    
+    // Normalizar telefone se fornecido
+    let normalizedPhone = phone
+    if (phone) {
+      // Remove caracteres não numéricos
+      const digits = phone.replace(/\D/g, '')
+      
+      // Se já começa com 55, mantém
+      if (digits.startsWith('55') && digits.length >= 12) {
+        normalizedPhone = digits
+      } else {
+        // Remove 0 inicial se houver
+        const withoutLeadingZero = digits.startsWith('0') ? digits.substring(1) : digits
+        
+        // Se tem 10 ou 11 dígitos (DDD + número), adiciona 55
+        if (withoutLeadingZero.length >= 10 && withoutLeadingZero.length <= 11) {
+          normalizedPhone = `55${withoutLeadingZero}`
+        } else if (withoutLeadingZero.length >= 12) {
+          normalizedPhone = withoutLeadingZero
+        } else {
+          normalizedPhone = withoutLeadingZero
+        }
+      }
+      
+      // Validar formato final
+      if (normalizedPhone.length < 12) {
+        return NextResponse.json({ 
+          error: 'Número de WhatsApp inválido. Deve incluir DDD e número.' 
+        }, { status: 400 });
+      }
     }
     
     console.log('[USERS_PATCH] Todas as validações passaram, atualizando usuário...');
@@ -244,14 +296,19 @@ export async function PATCH(request: NextRequest) {
       data: {
         ...(role && { role }),
         ...(isActive !== undefined && { isActive }),
-      },
+        ...(name && { name: name.trim() }),
+        ...(email && { email: email.trim().toLowerCase() }),
+        ...(phone !== undefined && { phone: normalizedPhone || null }),
+      } as any,
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
         isActive: true,
-      },
+        phone: true,
+        isVerified: true,
+      } as any,
     });
 
     return NextResponse.json({ user: updatedUser });
