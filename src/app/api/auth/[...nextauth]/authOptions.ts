@@ -79,18 +79,20 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Conta da família está desativada')
         }
 
+        const userPassword = userWithfamily.password as string | null | undefined
+        
         console.log('Senha fornecida:', credentials.password)
-        console.log('Hash armazenado:', userWithfamily.password)
-        console.log('Hash length:', userWithfamily.password?.length)
-        console.log('Hash starts with $2:', userWithfamily.password?.startsWith('$2'))
+        console.log('Hash armazenado:', userPassword)
+        console.log('Hash length:', userPassword?.length)
+        console.log('Hash starts with $2:', userPassword?.startsWith('$2'))
         
         // Verificar se o hash está no formato correto
-        if (!userWithfamily.password || !userWithfamily.password.startsWith('$2')) {
+        if (!userPassword || !userPassword.startsWith('$2')) {
           console.error('Hash de senha inválido ou não está no formato bcrypt')
           throw new Error('Erro interno: hash de senha inválido. Contate o administrador.')
         }
         
-        const isValid = await bcrypt.compare(credentials.password, userWithfamily.password)
+        const isValid = await bcrypt.compare(credentials.password, userPassword)
         console.log('Senha válida:', isValid)
 
         if (!isValid) {
