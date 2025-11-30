@@ -64,7 +64,21 @@ export default function CheckoutPage() {
     setError('')
 
     try {
-      // Criar assinatura e processar pagamento
+      if (paymentMethod === ('STRIPE' as any)) {
+        // Processar com Stripe
+        const res = await apiClient.post('/stripe/checkout', {
+          planId: plan.id,
+        })
+
+        if (res.data.url) {
+          window.location.href = res.data.url
+        } else {
+          setError(res.data.error || 'Erro ao criar sessão do Stripe')
+        }
+        return
+      }
+
+      // Criar assinatura e processar pagamento (Asaas)
       const res = await apiClient.post('/subscriptions/create', {
         planId: plan.id,
         paymentMethod,
@@ -84,7 +98,7 @@ export default function CheckoutPage() {
         setError(res.data.message || 'Erro ao processar pagamento')
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao processar pagamento')
+      setError(err.response?.data?.message || err.response?.data?.error || 'Erro ao processar pagamento')
     } finally {
       setProcessing(false)
     }
@@ -169,25 +183,36 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod('CREDIT_CARD')}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  paymentMethod === 'CREDIT_CARD'
-                    ? 'border-cyan-500 bg-cyan-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
+                className={`p-4 rounded-xl border-2 transition-all text-left ${paymentMethod === 'CREDIT_CARD'
+                  ? 'border-cyan-500 bg-cyan-50'
+                  : 'border-slate-200 hover:border-slate-300'
+                  }`}
               >
                 <RiBankCardLine className={`w-6 h-6 mb-2 ${paymentMethod === 'CREDIT_CARD' ? 'text-cyan-600' : 'text-slate-400'}`} />
-                <p className="font-medium text-slate-800">Cartão de Crédito</p>
-                <p className="text-xs text-slate-500 mt-1">Aprovação imediata</p>
+                <p className="font-medium text-slate-800">Cartão de Crédito (Asaas)</p>
+                <p className="text-xs text-slate-500 mt-1">Nacional</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('STRIPE' as any)}
+                className={`p-4 rounded-xl border-2 transition-all text-left ${paymentMethod === ('STRIPE' as any)
+                  ? 'border-cyan-500 bg-cyan-50'
+                  : 'border-slate-200 hover:border-slate-300'
+                  }`}
+              >
+                <RiBankCardLine className={`w-6 h-6 mb-2 ${paymentMethod === ('STRIPE' as any) ? 'text-cyan-600' : 'text-slate-400'}`} />
+                <p className="font-medium text-slate-800">Cartão de Crédito (Stripe)</p>
+                <p className="text-xs text-slate-500 mt-1">Internacional</p>
               </button>
 
               <button
                 type="button"
                 onClick={() => setPaymentMethod('BOLETO')}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  paymentMethod === 'BOLETO'
-                    ? 'border-cyan-500 bg-cyan-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
+                className={`p-4 rounded-xl border-2 transition-all text-left ${paymentMethod === 'BOLETO'
+                  ? 'border-cyan-500 bg-cyan-50'
+                  : 'border-slate-200 hover:border-slate-300'
+                  }`}
               >
                 <RiBankCardLine className={`w-6 h-6 mb-2 ${paymentMethod === 'BOLETO' ? 'text-cyan-600' : 'text-slate-400'}`} />
                 <p className="font-medium text-slate-800">Boleto</p>
@@ -197,11 +222,10 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod('PIX')}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  paymentMethod === 'PIX'
-                    ? 'border-cyan-500 bg-cyan-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
+                className={`p-4 rounded-xl border-2 transition-all text-left ${paymentMethod === 'PIX'
+                  ? 'border-cyan-500 bg-cyan-50'
+                  : 'border-slate-200 hover:border-slate-300'
+                  }`}
               >
                 <RiQrCodeLine className={`w-6 h-6 mb-2 ${paymentMethod === 'PIX' ? 'text-cyan-600' : 'text-slate-400'}`} />
                 <p className="font-medium text-slate-800">PIX</p>
@@ -254,7 +278,7 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 }
 

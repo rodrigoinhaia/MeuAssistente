@@ -35,7 +35,7 @@ const SYSTEM_SETTINGS_KEY = 'system_settings'
 export async function GET(req: Request) {
   const contextHeader = req.headers.get('x-admin-context')
   const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
-  
+
   const { session, role, error, adminContext: context } = await requireAuth(req, ['SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
@@ -50,18 +50,19 @@ export async function GET(req: Request) {
   }
 
   try {
-    // Buscar configurações do sistema (usando uma tabela simples ou JSON)
-    // Por enquanto, vamos usar uma abordagem simples: armazenar em uma tabela SystemConfig
+    // Buscar configurações do banco de dados
+    const config = await prisma.systemConfig.findUnique({
+      where: { key: SYSTEM_SETTINGS_KEY }
+    })
+
+    if (config) {
+      return NextResponse.json({
+        status: 'ok',
+        settings: config.value as SystemSettings,
+      })
+    }
+
     // Se não existir, retornar padrões
-    
-    // Tentar buscar do banco (se a tabela existir)
-    // Por enquanto, vamos retornar as configurações padrão
-    // TODO: Criar tabela SystemConfig no Prisma para persistir
-    
-    // Verificar se existe uma tabela de configurações
-    // Por enquanto, retornar padrões e permitir salvar em cache/memória
-    // Em produção, criar tabela SystemConfig
-    
     return NextResponse.json({
       status: 'ok',
       settings: DEFAULT_SETTINGS,
@@ -79,7 +80,7 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
   const contextHeader = req.headers.get('x-admin-context')
   const adminContext = (contextHeader === 'admin' || contextHeader === 'family') ? contextHeader : 'family'
-  
+
   const { session, role, error, adminContext: context } = await requireAuth(req, ['SUPER_ADMIN'], adminContext)
   if (error) {
     return NextResponse.json({ status: 'error', message: error.message }, { status: error.status })
@@ -157,12 +158,18 @@ export async function PUT(req: Request) {
       debugMode: Boolean(debugMode),
     }
 
-    // TODO: Salvar no banco quando a tabela SystemConfig for criada
-    // await prisma.systemConfig.upsert({
-    //   where: { key: SYSTEM_SETTINGS_KEY },
-    //   update: { value: updatedSettings, updatedAt: new Date() },
-    //   create: { key: SYSTEM_SETTINGS_KEY, value: updatedSettings },
-    // })
+    // Salvar no banco de dados
+    await prisma.systemConfig.upsert({
+      where: { key: SYSTEM_SETTINGS_KEY },
+      update: {
+        value: updatedSettings as any,
+        updatedAt: new Date()
+      },
+      create: {
+        key: SYSTEM_SETTINGS_KEY,
+        value: updatedSettings as any
+      },
+    })
 
     return NextResponse.json({
       status: 'ok',

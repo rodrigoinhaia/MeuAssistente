@@ -32,12 +32,15 @@ interface SystemSettings {
   enableSMSNotifications: boolean
   maintenanceMode: boolean
   debugMode: boolean
+  stripePublishableKey?: string
+  stripeSecretKey?: string
+  stripeWebhookSecret?: string
 }
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
   const currentUserRole = (session?.user as any)?.role
-  
+
   // Verificar se é SUPER_ADMIN
   useEffect(() => {
     if (status === 'authenticated' && currentUserRole !== 'SUPER_ADMIN') {
@@ -45,7 +48,7 @@ export default function SettingsPage() {
       window.location.href = '/dashboard'
     }
   }, [status, currentUserRole])
-  
+
   // Se não for SUPER_ADMIN, não renderizar nada
   if (status === 'authenticated' && currentUserRole !== 'SUPER_ADMIN') {
     return (
@@ -57,7 +60,7 @@ export default function SettingsPage() {
       </div>
     )
   }
-  
+
   const [settings, setSettings] = useState<SystemSettings>({
     companyName: 'MeuAssistente',
     supportEmail: 'suporte@meuassistente.com',
@@ -276,6 +279,55 @@ export default function SettingsPage() {
                 <span className="text-sm text-slate-600">Sincronizar compromissos e tarefas com Google</span>
               </div>
             </label>
+          </div>
+        </div>
+
+        {/* Configurações do Stripe */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
+            <RiPlugLine className="w-6 h-6 text-cyan-600" />
+            Configurações do Stripe
+          </h2>
+          <div className="grid grid-cols-1 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Stripe Publishable Key
+              </label>
+              <input
+                type="text"
+                placeholder="pk_test_..."
+                value={settings.stripePublishableKey || ''}
+                onChange={e => setSettings({ ...settings, stripePublishableKey: e.target.value })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono text-sm"
+              />
+              <p className="text-xs text-slate-500 mt-1">Chave pública do Stripe para o frontend</p>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Stripe Secret Key
+              </label>
+              <input
+                type="password"
+                placeholder="sk_test_..."
+                value={settings.stripeSecretKey || ''}
+                onChange={e => setSettings({ ...settings, stripeSecretKey: e.target.value })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono text-sm"
+              />
+              <p className="text-xs text-slate-500 mt-1">Chave secreta do Stripe (nunca compartilhe)</p>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Stripe Webhook Secret
+              </label>
+              <input
+                type="password"
+                placeholder="whsec_..."
+                value={settings.stripeWebhookSecret || ''}
+                onChange={e => setSettings({ ...settings, stripeWebhookSecret: e.target.value })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono text-sm"
+              />
+              <p className="text-xs text-slate-500 mt-1">Secret para validar webhooks do Stripe</p>
+            </div>
           </div>
         </div>
 
