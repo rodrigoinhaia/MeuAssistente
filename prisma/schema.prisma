@@ -35,6 +35,8 @@ model Family {
   payments        Payment[]
   bankConnections BankConnection[]
 
+  stripeCustomerId String? @unique @map("stripe_customer_id")
+
   @@map("families")
 }
 
@@ -224,6 +226,8 @@ model Subscription {
   startDate           DateTime  @map("start_date")
   endDate             DateTime? @map("end_date")
   asaasSubscriptionId String?   @map("asaas_subscription_id")
+  stripeSubscriptionId String?  @map("stripe_subscription_id")
+  stripePriceId       String?   @map("stripe_price_id")
   price               Decimal   @db.Decimal(10, 2) // Preço no momento da assinatura
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
