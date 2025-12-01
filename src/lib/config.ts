@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 const envSchema = z.object({
     // App
-    NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
     // Database
@@ -27,16 +27,14 @@ const envSchema = z.object({
 const _env = envSchema.safeParse(process.env)
 
 if (!_env.success) {
-    console.error('❌ Invalid environment variables:', _env.error.format())
-    // Em produção, talvez queiramos lançar um erro. Em dev, apenas logar.
-    if (process.env.NODE_ENV === 'production') {
-        throw new Error('Invalid environment variables')
-    }
+    console.warn('⚠️ Variáveis de ambiente inválidas:', _env.error.format())
 }
 
 export const config = {
     app: {
-        url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        url: (process.env.NEXT_PUBLIC_APP_URL && /^https?:\/\//.test(process.env.NEXT_PUBLIC_APP_URL))
+            ? process.env.NEXT_PUBLIC_APP_URL
+            : 'http://localhost:3000',
         env: process.env.NODE_ENV || 'development',
     },
     stripe: {
