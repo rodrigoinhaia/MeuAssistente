@@ -15,8 +15,10 @@ async function testResendOTPReal() {
   // Buscar um usuário real do banco
   const user = await prisma.user.findFirst({
     where: {
-      phone: { not: null },
-      phone: { not: '00000000000' },
+      AND: [
+        { phone: { not: '' } },
+        { phone: { not: '00000000000' } },
+      ],
     },
     select: {
       id: true,

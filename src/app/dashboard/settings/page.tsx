@@ -384,7 +384,7 @@ export default function SettingsPage() {
                 className="w-5 h-5 rounded border-red-300 text-red-600 focus:ring-red-500 focus:ring-2"
               />
               <div className="flex-1">
-                <span className="block font-medium text-red-800 group-hover:text-red-900 transition-colors flex items-center gap-2">
+                <span className="font-medium text-red-800 group-hover:text-red-900 transition-colors flex items-center gap-2">
                   <RiShieldLine className="w-4 h-4" />
                   Modo de Manutenção
                 </span>
@@ -399,7 +399,7 @@ export default function SettingsPage() {
                 className="w-5 h-5 rounded border-yellow-300 text-yellow-600 focus:ring-yellow-500 focus:ring-2"
               />
               <div className="flex-1">
-                <span className="block font-medium text-yellow-800 group-hover:text-yellow-900 transition-colors flex items-center gap-2">
+                <span className="font-medium text-yellow-800 group-hover:text-yellow-900 transition-colors flex items-center gap-2">
                   <RiBugLine className="w-4 h-4" />
                   Modo Debug
                 </span>

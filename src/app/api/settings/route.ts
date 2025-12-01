@@ -58,7 +58,7 @@ export async function GET(req: Request) {
     if (config) {
       return NextResponse.json({
         status: 'ok',
-        settings: config.value as SystemSettings,
+        settings: config.value as unknown as SystemSettings,
       })
     }
 

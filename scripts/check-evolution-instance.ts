@@ -116,7 +116,7 @@ async function checkEvolutionInstance() {
         console.log('   Verifique se o número está registrado na instância')
       }
     } else {
-      const errorData = await sendResponse.json().catch(() => ({ message: await sendResponse.text() }))
+      const errorData = await sendResponse.json().catch(async () => ({ message: await sendResponse.text() }))
       console.error(`   ❌ Erro ao enviar: ${sendResponse.status}`)
       console.error(`   Resposta:`, errorData)
     }
