@@ -291,46 +291,51 @@ export default function SettingsPage() {
             <RiPlugLine className="w-6 h-6 text-cyan-600" />
             Configurações do Stripe
           </h2>
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Stripe Publishable Key
-              </label>
+          <div className="space-y-4">
+            <label className="flex items-center gap-3 p-4 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 hover:border-cyan-300 transition-all cursor-pointer group">
               <input
-                type="text"
-                placeholder="pk_test_..."
-                value={settings.stripePublishableKey || ''}
-                onChange={e => setSettings({ ...settings, stripePublishableKey: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono text-sm"
+                type="checkbox"
+                checked={settings.enableStripe}
+                onChange={e => setSettings({ ...settings, enableStripe: e.target.checked })}
+                className="w-5 h-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 focus:ring-2"
               />
-              <p className="text-xs text-slate-500 mt-1">Chave pública do Stripe para o frontend</p>
+              <div className="flex-1">
+                <span className="block font-medium text-slate-800 group-hover:text-cyan-700 transition-colors">
+                  Habilitar Stripe
+                </span>
+                <span className="text-sm text-slate-600">Ativa o fluxo de checkout e cobrança</span>
+              </div>
+            </label>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Price ID (Plano Básico)
+                </label>
+                <input
+                  type="text"
+                  placeholder="price_..."
+                  value={settings.stripeBasicPriceId || ''}
+                  onChange={e => setSettings({ ...settings, stripeBasicPriceId: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">ID de preço do Stripe para o plano Básico</p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Price ID (Plano Premium)
+                </label>
+                <input
+                  type="text"
+                  placeholder="price_..."
+                  value={settings.stripePremiumPriceId || ''}
+                  onChange={e => setSettings({ ...settings, stripePremiumPriceId: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">ID de preço do Stripe para o plano Premium</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Stripe Secret Key
-              </label>
-              <input
-                type="password"
-                placeholder="sk_test_..."
-                value={settings.stripeSecretKey || ''}
-                onChange={e => setSettings({ ...settings, stripeSecretKey: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono text-sm"
-              />
-              <p className="text-xs text-slate-500 mt-1">Chave secreta do Stripe (nunca compartilhe)</p>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Stripe Webhook Secret
-              </label>
-              <input
-                type="password"
-                placeholder="whsec_..."
-                value={settings.stripeWebhookSecret || ''}
-                onChange={e => setSettings({ ...settings, stripeWebhookSecret: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono text-sm"
-              />
-              <p className="text-xs text-slate-500 mt-1">Secret para validar webhooks do Stripe</p>
-            </div>
+            <p className="text-xs text-slate-500">Observação: chaves do Stripe (secret/webhook) devem ficar nas variáveis de ambiente e não são salvas aqui.</p>
           </div>
         </div>
 
