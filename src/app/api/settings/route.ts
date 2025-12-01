@@ -13,6 +13,9 @@ interface SystemSettings {
   enableSMSNotifications: boolean
   maintenanceMode: boolean
   debugMode: boolean
+  enableStripe: boolean
+  stripeBasicPriceId?: string | null
+  stripePremiumPriceId?: string | null
 }
 
 // Configurações padrão do sistema
@@ -27,6 +30,9 @@ const DEFAULT_SETTINGS: SystemSettings = {
   enableSMSNotifications: false,
   maintenanceMode: false,
   debugMode: false,
+  enableStripe: false,
+  stripeBasicPriceId: null,
+  stripePremiumPriceId: null,
 }
 
 // Chave única para as configurações do sistema (usando uma chave fixa)
@@ -107,6 +113,9 @@ export async function PUT(req: Request) {
       enableSMSNotifications,
       maintenanceMode,
       debugMode,
+      enableStripe,
+      stripeBasicPriceId,
+      stripePremiumPriceId,
     } = body
 
     // Validações
@@ -156,6 +165,9 @@ export async function PUT(req: Request) {
       enableSMSNotifications: Boolean(enableSMSNotifications),
       maintenanceMode: Boolean(maintenanceMode),
       debugMode: Boolean(debugMode),
+      enableStripe: Boolean(enableStripe),
+      stripeBasicPriceId: stripeBasicPriceId ? String(stripeBasicPriceId).trim() : null,
+      stripePremiumPriceId: stripePremiumPriceId ? String(stripePremiumPriceId).trim() : null,
     }
 
     // Salvar no banco de dados

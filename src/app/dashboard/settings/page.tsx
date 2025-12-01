@@ -32,9 +32,9 @@ interface SystemSettings {
   enableSMSNotifications: boolean
   maintenanceMode: boolean
   debugMode: boolean
-  stripePublishableKey?: string
-  stripeSecretKey?: string
-  stripeWebhookSecret?: string
+  enableStripe: boolean
+  stripeBasicPriceId?: string | null
+  stripePremiumPriceId?: string | null
 }
 
 export default function SettingsPage() {
@@ -72,6 +72,9 @@ export default function SettingsPage() {
     enableSMSNotifications: false,
     maintenanceMode: false,
     debugMode: false,
+    enableStripe: false,
+    stripeBasicPriceId: null,
+    stripePremiumPriceId: null,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
